@@ -6,12 +6,9 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 
 /**
- * Created by IntelliJ IDEA.
  * User: dfinlay
  * Date: 9/26/12
- * Time: 10:08 AM
- * To change this template use File | Settings | File Templates.
- */
+*/
 public abstract class ExecTest
 {
 
