@@ -1,0 +1,98 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>Maze</title>
+
+    <style media="screen" type="text/css">
+        table.maze { border:1px solid black; border-collapse:collapse; }
+        td { height:20px; width:20px;
+             font-size:12px; color:gray; text-align:center }
+        td.source { background-color:green }
+        td.dest  { background-color:red }
+        .btop    { border-top:1px solid }
+        .bleft   { border-left:1px solid }
+        .bright  { border-right:1px solid }
+        .bbottom { border-bottom:1px solid }
+    </style>
+</head>
+<body>
+<script type="text/javascript" src="jquery-1.10.0.js"></script>
+<script type="text/javascript" src="maze.js"></script>
+<div class="maze">
+Maze
+<button type="submit" id="calc">Calculate route</button>
+<div id="result"></div>
+<table class="maze">
+    <tbody class="mazeBody">
+    </tbody>
+</table>
+
+</div>
+<div class="arcs">
+
+</div>
+
+<script type="text/javascript">
+    var m = new maze.Maze(30,68);
+
+    //var result = m.getArcs();
+    //$("div.arcs").html(result)
+
+
+    test();
+    m.draw();
+    $( "td" ).click( function () {
+        var id = m.sourceId();
+        if (!id) {
+            m.setSource(this.id);
+            $( this ).addClass("source");
+        }
+        else {
+            if (this.id == id) {
+                // removing source
+                m.setSource(null);
+                $( this ).removeClass("source");
+            }
+            else {
+                id = m.destId();
+                if (!id) {
+                    m.setDest(this.id);
+                    $( this ).addClass("dest");
+                }
+                else if (this.id == id) {
+                    m.setDest(null);
+                    $( this ).removeClass("dest");
+                }
+                else {
+                    m.setDest(this.id);
+                    $( this ).addClass("dest");
+                    var idref = "#" + id;
+                    $( idref ).removeClass("dest");
+                }
+            }
+        }
+    });
+    $( "#calc" ).click( function () {
+        var result = m.calculateRoute();
+        if (result['result'] == "success") {
+            $( "#result" ).html("Path found!");
+            var source = m.sourceId();
+            var current = m.destId();
+            while (current) {
+                var details = result[current];
+                if (current == source) {
+                    break;
+                }
+                $( "#" + current ).html(details.dist);
+                current = details.parent;
+            }
+        }
+        else {
+            $( "#result" ).html("Could not find a path!");
+        }
+    });
+
+</script>
+</body>
+</html>
