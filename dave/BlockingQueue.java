@@ -3,12 +3,7 @@ package dave;
 import java.util.LinkedList;
 
 /**
- * Created by IntelliJ IDEA.
- * User: dfinlay
- * Date: 9/30/12
- * Time: 9:30 PM
- * To change this template use File | Settings | File Templates.
- */
+*/
 public class BlockingQueue<E>
 {
     private LinkedList<E> _queue;
