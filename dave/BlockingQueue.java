@@ -7,11 +7,6 @@ import java.util.LinkedList;
 public class BlockingQueue<E>
 {
     private LinkedList<E> _queue;
-
-
-    accidentally-on-purpose added some text that I will later revert
-
-
     private int _max;
 
     public BlockingQueue (int max)
