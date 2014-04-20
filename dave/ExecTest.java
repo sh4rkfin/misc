@@ -16,7 +16,11 @@ public abstract class ExecTest
     throws Exception
     {
         File dir = new File("./out/production/misc");
+<<<<<<< HEAD
         p.Process p = Runtime.getRuntime().exec("java dave.Test", null, dir);
+=======
+        java.lang.Process p = Runtime.getRuntime().exec("java dave.Test", null, dir);
+>>>>>>> firstbranch
         Reader r = new InputStreamReader(new BufferedInputStream(p.getInputStream()));
         char[] buf = new char[8];
         int read;
