@@ -6,12 +6,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: dfinlay
- * Date: 9/25/12
- * Time: 12:00 AM
- * To change this template use File | Settings | File Templates.
- */
+    User: dfinlay
+    Date: 9/25/12
+*/
 public class EchoWorker implements Runnable
 {
 
