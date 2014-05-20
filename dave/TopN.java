@@ -110,7 +110,7 @@ public abstract class TopN
                 tree.add(current);
             }
             else {
-                Count top = tree.first();
+                Count<String> top = tree.first();
                 if (Count.CountComp.compare(top, current) < 0) {
                     tree.pollFirst();
                     tree.add(current);

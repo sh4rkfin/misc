@@ -141,6 +141,21 @@ public abstract class Util
         return new Heap.Source<String>(h);
     }
 
+    public static final double SqrtTolerance = 1e-12;
+
+    public static double sqrt (double x)
+    {
+        double z = 1.0;
+        double delta;
+        int count = 0;
+        while (Math.abs((delta = (z - x / z) / 2)) > SqrtTolerance) {
+            z = z - delta;
+            if (count > 20) break;
+            count++;
+        }
+        return z;
+    }
+
     private static void testSort () throws Exception
     {
         Iterator<String>[] sources = (Iterator<String>[])new Iterator[10];
@@ -164,9 +179,7 @@ public abstract class Util
         SortUtil.assertSorted(top, null, null);
     }
 
-
-    public static void main (String[] args)
-    throws Exception
+    public static void testBigIntThing ()
     {
         long l = 1L << 32;
         System.out.println(l);
@@ -174,6 +187,16 @@ public abstract class Util
         BigInteger bi2 = new BigInteger(Long.toString(l));
         System.out.println(bi);
         System.out.println(bi2);
+    }
+
+    public static void main (String[] args)
+    throws Exception
+    {
+        double x = 2;
+        System.out.println("sqrt1: " + sqrt(x));
+        System.out.println("sqrt1: " + sqrt(x) * sqrt(x));
+        System.out.println("sqrt2: " + Math.sqrt(x));
+        System.out.println("sqrt2: " + Math.sqrt(x) * Math.sqrt(x));
     }
 }
 

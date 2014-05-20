@@ -329,6 +329,10 @@ public abstract class SortUtil
         }
     }
 
+    /**
+     * Is a holder of an item of type W
+     * @param <W> the type of item that this is a source of
+     */
     public static class ItemSource<W>
     {
         public final Iterator<W> source;
@@ -340,12 +344,18 @@ public abstract class SortUtil
             this.item = item;
         }
 
+        /**
+         * Creates and returns a <code>Comparator</code> of ItemSources, based on the supplied
+         * comparator.
+         * @param comparator
+         * @param <W>
+         * @return
+         */
         public static <W> Comparator<ItemSource<W>> makeComparator (final Comparator<W> comparator)
         {
             return new Comparator<ItemSource<W>> () {
                 public int compare (ItemSource<W> first, ItemSource<W> second) {
                     return SortUtil.compare(first.item, second.item, comparator, null);
-
                 }
             };
         }
