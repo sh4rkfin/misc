@@ -135,6 +135,8 @@ public class ConsistentHashRing
         long hash = hash(resource);
         Server res = new Server(hash);
         int val = Arrays.binarySearch(_servers, 0, _count, res, Server.HashComparator);
+        // this looks like a bug, but actually isn't. idx >=0 iff resource has the same hash
+        // in the ring as a server. But it can't as the server name of the resource is null.
         int idx = -val - 1;
         if (idx < _count) {
             return _servers[idx].serverName;
@@ -247,7 +249,7 @@ public class ConsistentHashRing
     {
         Map<String,Integer> results = new HashMap<String,Integer>();
         for (int i=0; i<resourceCount; ++i) {
-            String server = ring.getServer("CommunityWorkQueue-"+i);
+            String server = ring.getServer("CommunityWorkQueue-" + i);
             Integer count = results.get(server);
             results.put(server, (count != null) ? count + 1 : 1);
         }
