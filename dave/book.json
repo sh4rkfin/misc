@@ -1,0 +1,12 @@
+{
+    // Dave said: “this is a great book! --
+    // but check out the price on Amazon
+    // http://www.amazon.com/Ulysses-James-Joyce/dp/1840226358
+    "title": "Ulysses",
+    "type": "Book",
+    "wikipedia": "http://en.wikipedia.org/wiki/Ulysses_(novel)", // need to verify
+    "author": "James Joyce",
+    "isbn": 1840226358,
+    "description": "Ulysses is a modernist novel by Irish writer James Joyce. It was first serialised in parts in the American journal The Little Review from March 1918 to December 1920, and then published in its entirety by Sylvia Beach in February 1922, in Paris. It is considered to be one of the most important works of modernist literature,[1] and has been called \"a demonstration and summation of the entire movement\""
+}
+
