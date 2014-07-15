@@ -6,3 +6,4 @@
 .project
 bin/
 pkg/
+erl/data/
