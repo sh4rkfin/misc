@@ -1,6 +1,6 @@
 %% Copyright
 -module(tut15).
--author("i835364").
+-author("dave").
 
 %% API
 -export([start/0, ping/2, pong/0]).

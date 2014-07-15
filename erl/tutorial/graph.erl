@@ -1,6 +1,6 @@
 %% Copyright
 -module(graph).
--author("i835364").
+-author("dave").
 
 
 -export([find_max_length/1]).
