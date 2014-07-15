@@ -3,7 +3,7 @@
 -author("dave").
 
 %% API
--export([make/0, make/1, test/0, test1/0, test2/0, test3/0, test4/0, test5/0]).
+-export([make/0, make/1, binarytree_test/0, test1/0, test2/0, test3/0, test4/0, test5/0]).
 
 make(Comp) ->
   {{nil, nil, nil}, Comp}.
@@ -122,7 +122,7 @@ test5() ->
   F = fun util:signum/2,
   F(2,3).
 
-test() ->
+binarytree_test() ->
   test1(),
   test2(),
   test3(),
