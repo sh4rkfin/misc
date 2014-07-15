@@ -1,0 +1,8 @@
+*.beam
+*.tar.gz
+*.test
+*~
+.DS_Store
+.project
+bin/
+pkg/
