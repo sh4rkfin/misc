@@ -2,6 +2,7 @@
 
 class Node:
     depth_invocations = 0
+
     def __init__(self, children):
         self.children = children
 
