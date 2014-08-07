@@ -26,7 +26,7 @@
 %% foo
 %% 5> Pid ! foo.
 %% foo
-%% \6> Pid ! foo.
+%% 6> Pid ! foo.
 %% foo
 %% 7> Pid ! like.
 %% Like this one
