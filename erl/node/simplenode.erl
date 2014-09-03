@@ -29,8 +29,8 @@ create_nodes(Count) ->
   [Node] ++ Nodes.
 
 node_test() ->
-  [First | _] = create_nodes(25),
-  io:format("processing node: ~p~n", [max_depth(First)]).
+  [First | _] = create_nodes(29),
+  io:format("processing node: ~p depth: ~p~n", [First#node.name, max_depth(First)]).
 
 
 node2_test() ->
