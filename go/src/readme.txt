@@ -7,7 +7,7 @@ To verify compilation
   go build
 
 To run tests
-  go test   
+  go test
 
 To compile the tests for debugging with gdb
   go test -c -gcflags "-N -l"
