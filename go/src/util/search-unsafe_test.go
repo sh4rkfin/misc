@@ -1,6 +1,3 @@
-/**
-* User: dave
-*/
 package util
 
 import (

@@ -1,10 +1,3 @@
-/**
- * Created with IntelliJ IDEA.
- * User: dave
- * Date: 5/26/14
- * Time: 8:38 PM
- * To change this template use File | Settings | File Templates.
- */
 package util
 
 type Node struct {
