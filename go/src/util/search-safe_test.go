@@ -17,6 +17,7 @@ type TestSafe struct {
 
 var debugWriter io.Writer
 
+// Is a slice of pointers to TestSafe instances
 type TestArray []*TestSafe
 
 func (list TestArray) Get(idx int) interface{} {
@@ -67,18 +68,6 @@ func testNotIn (arraySlice []*TestSafe) {
 		insertionPoint := i + 1
 		fmt.Printf("idx: %v (should be: %v)\n",strconv.Itoa(val), -insertionPoint - 1)
 	}
-}
-
-func TestList (t *testing.T) {
-	list := &List{}
-	for i:=0; i < 12; i	++ {
-		elem := TestSafe{"Foo" + strconv.Itoa(i)}
-		list.Add(elem)
-		fmt.Printf("list %p, %v\n", list, list)
-	}
-
-	list.Insert(9, TestSafe{"Bar"})
-	fmt.Printf("list %p, %v\n", list, list)
 }
 
 func Compare (first interface{}, second interface{}) int {
