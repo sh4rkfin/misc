@@ -17,9 +17,9 @@ class Component:
             processing_states[self] = Component.PROCESSING
             for d in self.dependents:
                 (x, child_has_loop) = d.build_dependency_list(list, processing_states)
-                #has_loop = has_loop or child_has_loop
                 if child_has_loop:
                     has_loop = True
+            # add the component to the end of the list
             list.append(self.name)
             processing_states[self] = Component.PROCESSED
         elif processing_state == Component.PROCESSING:
