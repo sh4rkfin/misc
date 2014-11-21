@@ -8,18 +8,18 @@ var Graph = {
             Node._depthCalls = 0;
         }
         this._id = Node.instanceId++;
-        this._name = name;
-        this._children = children ? children : [];
+        this.name = name;
+        this.children = children ? children : [];
 
         this.getChildren = function () {
-            return this._children;
+            return this.children;
         };
         this.getName = function () {
             return this._name;
         };
         this.depth = function (nodeDepths) {
             Node._depthCalls++;
-            var len = this._children.length;
+            var len = this.children.length;
             if (len == 0) {
                 return 0;
             }
@@ -29,7 +29,7 @@ var Graph = {
             }
             var result = 0;
             for (var i=0; i<len; i++) {
-                var d = this._children[i].depth(nodeDepths);
+                var d = this.children[i].depth(nodeDepths);
                 if (result < d) result = d;
             }
             result++;

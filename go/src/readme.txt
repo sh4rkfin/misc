@@ -7,9 +7,11 @@ To verify compilation
   go build
 
 To run tests
-  go test
+  go test   
 
 To compile the tests for debugging with gdb
   go test -c -gcflags "-N -l"
 
-To view the godoc generated document
+To view the godoc generated documentation run:
+  godoc -http=":6060" &
+  open http://localhost:6060/pkg/{name of package you're interested   in}
