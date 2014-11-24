@@ -1,7 +1,7 @@
 package graph
 
 import (
-	"fmt"
+	"bytes"
 )
 
 type Node struct {
@@ -57,14 +57,13 @@ func (this *Node) Depth() int {
 
 func (this *Node) String() string {
 	size := len(this.children)
-	prefix := fmt.Sprintf("%s", this.name)
-	if size > 0 {
-		first := this.children[0]
-		prefix = fmt.Sprintf("%s [%s", prefix, first.name)
-		for idx := 1; idx < size; idx++ {
-			prefix = fmt.Sprintf("%s, %s", prefix, this.children[idx].name)
-		}
-		prefix = fmt.Sprintf("%s]", prefix)
+	var buffer bytes.Buffer
+	buffer.WriteString(this.name)
+	buffer.WriteString(" [")
+	for idx := 0; idx < size; idx++ {
+		buffer.WriteString(this.children[idx].name)
+		buffer.WriteString(" ")
 	}
-	return prefix
+	buffer.WriteString("]")
+	return buffer.String()
 }
