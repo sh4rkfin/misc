@@ -1,4 +1,12 @@
-/*  */
+/*
+ VBucket Map Generation.
+
+ TODO: file to be better named.
+ TODO: better commented
+
+ Try this file with ./data/10-node-2-replicas.data
+
+*/
 
 param n, integer, > 0;
 /* number of nodes */

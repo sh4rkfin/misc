@@ -1,19 +1,12 @@
-/* ASSIGN, Assignment Problem */
+/*
+ Replica network generation.
 
-/* Written in GNU MathProg by Andrew Makhorin <mao@mai2.rcnet.ru> */
+ TODO: file to be better named.
+ TODO: better commented
 
-/* The assignment problem is one of the fundamental combinatorial
-   optimization problems.
-
-   In its most general form, the problem is as follows:
-
-   There are a number of agents and a number of tasks. Any agent can be
-   assigned to perform any task, incurring some cost that may vary
-   depending on the agent-task assignment. It is required to perform all
-   tasks by assigning exactly one agent to each task in such a way that
-   the total cost of the assignment is minimized.
-
-   (From Wikipedia, the free encyclopedia.) */
+ Try this file with ./data/9-node.data
+ 
+*/
 
 param n, integer, > 0;  /* number of active nodes */
 
