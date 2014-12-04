@@ -2,6 +2,7 @@
 *.tar.gz
 *.test
 *~
+*.iml
 .DS_Store
 .project
 bin/
