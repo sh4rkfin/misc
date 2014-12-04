@@ -1,7 +1,6 @@
 /*
  Replica network generation.
 
- TODO: file to be better named.
  TODO: better commented
 
  Try this file with ./data/9-node.data
