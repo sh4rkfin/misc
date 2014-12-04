@@ -23,7 +23,7 @@ def build_replica_networks ():
     with open("cluster.data", "w") as text_file:
         text_file.write(data_string.format(args.n, args.r, args.s))
 
-    call([LPSOLVER, "-m", "models/basic-rebal.mod", "-d", "cluster.data", "-o", "result.txt"])
+    call([LPSOLVER, "-m", "models/replica-map-gen.mod", "-d", "cluster.data", "-o", "result.txt"])
 
     # next read replication matrix
     rep = [[[0 for i in range(args.n)] for i in range(args.n)] for i in range(args.r)]
