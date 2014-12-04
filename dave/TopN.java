@@ -5,9 +5,7 @@ import org.w3c.dom.css.Counter;
 import java.util.*;
 
 /**
- * User: dfinlay
- * Date: 8/23/13
- */
+*/
 public abstract class TopN
 {
     private static ThreadLocal<SortUtil.Stats> Stats = new ThreadLocal<SortUtil.Stats>() {

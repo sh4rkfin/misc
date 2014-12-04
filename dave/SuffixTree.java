@@ -1,9 +1,7 @@
 package dave;
 
 /**
- * User: dfinlay
- * Date: 8/29/13
- */
+*/
 public class SuffixTree
 {
     Node root;

@@ -5,12 +5,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: dfinlay
- * Date: 9/22/12
- * Time: 4:45 PM
- * To change this template use File | Settings | File Templates.
- */
+*/
 public abstract class Util
 {
     public static int sgn (int first, int second)
