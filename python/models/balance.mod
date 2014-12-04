@@ -9,6 +9,9 @@ param v, integer > 0;
 param r, integer > 0;
 /* number of replicas */
 
+param tol, > 0;
+/* number of replicas */
+
 set N := 0..(n-1);
 /* set of nodes */
 
@@ -46,7 +49,13 @@ var eout{i in N}, >= 0;
 s.t. act_bal{i in N}: avb[i] - ein[i] <= ceil(v/n);
 /*  active vbuckets on each node less the excess close to ceil(v/n)  */
 
-s.t. rep_bal{i in N}: rvb[i] - eout[i] <= r * ceil(v/n);
+s.t. act_min{i in N}: avb[i] >= floor((100 - tol) * v / (100 * n));
+/*  active vbuckets on each node within 5% of max */
+
+s.t. rep_bal{i in N}: rvb[i] - eout[i] <= ceil(r * v / n);
+/*  outbound replication on each node + excess less than or equal to close to v/n  */
+
+s.t. rep_min{i in N}: rvb[i] >= floor((100 - tol) * r * v / (100 * n));
 /*  outbound replication on each node + excess less than or equal to close to v/n  */
 
 s.t. noselfreplication{i in N}: x[i,i] = 0;
