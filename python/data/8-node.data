@@ -1,0 +1,11 @@
+data;
+
+param n := 8;
+
+param r := 2;
+
+param s := 2;
+
+param pretty := 1;
+
+end;
