@@ -8,36 +8,28 @@
 
 */
 
-param n, integer, > 0;
-/* number of nodes */
+param n, integer, > 0;      /* number of nodes */
 
-param v, integer > 0;
-/* number of vbuckets */
+param v, integer > 0;       /* number of vbuckets */
 
-param r, integer > 0;
-/* number of replicas */
+param r, integer > 0;       /* number of replicas */
 
-param tol, > 0;
-/* number of replicas */
+param tol, > 0;             /* number of replicas */
 
-set N := 0..(n-1);
-/* set of nodes */
+set N := 0..(n-1);          /* set of nodes */
 
-set R := 0..(r-1);
-/* set of replicas */
+set R := 0..(r-1);          /* set of replicas */
 
-param conn{i in N, j in N, k in R}, >= 0;
-/* if there's a connection from i -> j for the k-th replica */
-
-var avb{i in N}, >= 0;
-/* number of active vbuckets on each node */
+var avb{i in N}, >= 0;      /* number of active vbuckets on each node */
 
 s.t. tot_vbuckets: sum{i in N} avb[i] = v;
 
-var rvb{i in N}, >= 0;
-/* number of replicat vbuckets on each node */
+var rvb{i in N}, >= 0;      /* number of replicat vbuckets on each node */
 
 s.t. tot_rvbuckets: sum{i in N} rvb[i] = r * v;
+
+param conn{i in N, j in N, k in R}, >= 0;
+/* if there's a connection from i -> j for the k-th replica */
 
 var x{i in N, j in N}, integer, >= 0;
 /* x[i,j] = 1 number of vbuckets replicated from node i to node j */
@@ -48,11 +40,9 @@ s.t. conn_const{i in N, j in N}: (1 - sum{k in R}conn[i,j,k]) * x[i,j] = 0;
 s.t. replicas_balance_out{i in N, k in R}: sum{j in N}(conn[i,j,k] * x[i,j]) - avb[i] = 0;
 s.t. replicas_balance_in{j in N}: sum{i in N} x[i,j] - rvb[j] = 0;
 
-var ein{i in N}, >= 0;
-/* excess for node i */
+var ein{i in N}, >= 0;      /* excess for node i */
 
-var eout{i in N}, >= 0;
-/* excess inbound for node i */
+var eout{i in N}, >= 0;     /* excess inbound for node i */
 
 s.t. act_bal{i in N}: avb[i] - ein[i] <= ceil(v/n);
 /*  active vbuckets on each node less the excess close to ceil(v/n)  */
