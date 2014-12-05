@@ -42,9 +42,10 @@ param prev{i in N, j in N, k in R}, binary;
 var dpos{i in N, j in N, k in R}, binary;
 var dneg{i in N, j in N, k in R}, binary;
 
-s.t. pos_dff{i in N, j in N, k in R}: x[i,j,k] - prev[i,j,k] - dpos[i,j,k] <= 0;
-s.t. neg_diff{i in N, j in N, k in R}: prev[i,j,k] - x[i,j,k] - dneg[i,j,k] <= 0;
+s.t. rem_conn{i in N, j in N, k in R}: prev[i,j,k] - x[i,j,k] - dneg[i,j,k] <= 0;
+s.t. add_conn{i in N, j in N, k in R}: x[i,j,k] - prev[i,j,k] - dpos[i,j,k] <= 0;
 
+/* TODO: don't penalize additions of connections */
 minimize obj: sum{i in N, j in N, k in R} (dpos[i,j,k] + dneg[i,j,k]);  /* minimize the diff */
 
 solve;
