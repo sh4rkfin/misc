@@ -69,7 +69,16 @@ s.t. rep_min{i in N}: rvb[i] >= floor((100 - tol) * r * v / (100 * n));
 s.t. noselfreplication{i in N}: x[i,i] = 0;
 /* no self replication */
 
-minimize obj: sum{i in N} (ein[i] + eout[i]);
+/* TODO: find some way to lightly penalize the number of connections used
+   Way to do it:
+   new variables:
+    var x_unit{i in N, j in N}, binary;
+    var x_more{i in N, j in N}, integer, >= 0;
+    x_unit + x_more = x for all i,j
+    add sum(x_unit) - r to the penalty function with light costing.
+    since sum(x_unit) is >= r (# of replicas)
+   */
+minimize obj: sum{i in N} 10 * (ein[i] + eout[i]);
 /* minimize the excess */
 
 solve;
