@@ -20,15 +20,17 @@ args = parser.parse_args()
 
 SOLVER = "/Users/dfinlay/eclipse-projects/glpk-4.35/examples/glpsol"
 
+
 def parse(filename, regex, processor):
-    with open(filename, "r") as file:
+    with open(filename, "r") as f:
         matcher = re.compile(regex)
-        for line in file:
+        for line in f:
             m = matcher.search(line)
             if m:
                 processor(m)
 
-def build_replica_networks(node_count, replica_count, slave_factor, prev=None):
+
+def build_replica_networks(node_count, replica_count, slave_factor, previous=None):
     data_string = "data; " \
                   "param n := {0}; " \
                   "param r := {1}; " \
@@ -37,15 +39,15 @@ def build_replica_networks(node_count, replica_count, slave_factor, prev=None):
                   "param prev :=\n" \
                   "{3};" \
                   "end;\n"
-    if prev == None:
-        prev = [[[0 for i in range(node_count)]
-                    for i in range(node_count)]
-                    for i in range(replica_count)]
+    if previous is None:
+        previous = [[[0 for _ in range(node_count)]
+                    for _ in range(node_count)]
+                    for _ in range(replica_count)]
 
     cluster_file = "cluster-n{0}-r{1}-replicagen.data".format(node_count, replica_count)
     with open(cluster_file, "w") as text_file:
         text_file.write(data_string.format(node_count, replica_count, slave_factor,
-                                           make_prev_connections_string(prev)))
+                                           make_prev_connections_string(previous)))
 
     result_file = "result-n{0}-r{1}-replicagen.txt".format(node_count, replica_count)
     call([SOLVER,
@@ -54,20 +56,22 @@ def build_replica_networks(node_count, replica_count, slave_factor, prev=None):
           "-o", result_file])
 
     # next read replication matrix
-    rep = [[[0 for i in range(node_count)]
-               for i in range(node_count)]
-               for i in range(replica_count)]
+    rep = [[[0 for _ in range(node_count)]
+               for _ in range(node_count)]
+               for _ in range(replica_count)]
     regex = "x\[(\d+),(\d+)\,(\d+)]\s*\*\s*(\d+)"
     def my_processor(m):
         rep[int(m.group(3))][int(m.group(1))][int(m.group(2))] = int(m.group(4))
     parse(result_file, regex, my_processor)
     return rep
 
+
 def ensure_has_capacity(array, size, default_value):
     current_size = len(array)
     if size > current_size:
         for _ in range(size - current_size):
             array.append(default_value())
+
 
 def read_1d_variable(filename, var_name):
     result = []
@@ -78,6 +82,7 @@ def read_1d_variable(filename, var_name):
         result[row] = int(m.group(3))
     parse(filename, regex, my_proc)
     return result
+
 
 def read_2d_variable(filename, var_name):
     result = []
@@ -92,49 +97,54 @@ def read_2d_variable(filename, var_name):
     parse(filename, regex, my_proc)
     return result
 
+
 def twod_array_to_string(array, with_indices=False, end_of_index_line=""):
-    str = ""
+    result = ""
     size = len(array)
     if with_indices:
         for i in range(size):
-            str += "{0} ".format(i)
-        str += " {0}\n".format(end_of_index_line)
+            result += "{0} ".format(i)
+        result += " {0}\n".format(end_of_index_line)
     for i in range(size):
         if with_indices:
-            str += " {0} ".format(i)
+            result += " {0} ".format(i)
         for val in array[i]:
-            str += " {0}".format(val)
-        str += '\n'
-    return str
+            result += " {0}".format(val)
+        result += '\n'
+    return result
+
 
 def make_replica_networks_string(replica_networks):
-    str = ""
+    result = ""
     for k in range(len(replica_networks)):
-        str += "[*,*,{0}]: ".format(k)
-        str += twod_array_to_string(array=replica_networks[k],
-                                    with_indices=True,
-                                    end_of_index_line=":=")
-    return str
+        result += "[*,*,{0}]: ".format(k)
+        result += twod_array_to_string(array=replica_networks[k],
+                                       with_indices=True,
+                                       end_of_index_line=":=")
+    return result
+
 
 def make_prev_connections_string(prev_connections):
-    str = ""
+    result = ""
     for k in range(len(prev_connections)):
-        str += "[*,*,{0}]: ".format(k)
-        str += twod_array_to_string(array=prev_connections[k],
-                                    with_indices=True,
-                                    end_of_index_line=":=")
-    return str
+        result += "[*,*,{0}]: ".format(k)
+        result += twod_array_to_string(array=prev_connections[k],
+                                       with_indices=True,
+                                       end_of_index_line=":=")
+    return result
+
 
 def make_1d_string (array):
-    str = ""
+    result = ""
     size = len(array)
     for i in range(size):
-        str += " {0} {1}".format(i, array[i])
+        result += " {0} {1}".format(i, array[i])
         if i < size - 1:
-            str += ","
-    return str
+            result += ","
+    return result
 
-def generate_vbmap (node_count, replica_count, replica_networks, result_file, prev_avb=None, prev_rvb=None):
+
+def generate_vbmap(node_count, replica_count, replica_networks, result_file, prev_avb=None, prev_rvb=None):
     data_string = "data; " \
                   "param n := {0}; " \
                   "param r := {1}; " \
@@ -147,19 +157,20 @@ def generate_vbmap (node_count, replica_count, replica_networks, result_file, pr
         text_file.write(data_string.format(node_count,
                                            replica_count,
                                            make_replica_networks_string(replica_networks)))
-        if not prev_avb == None:
+        if not prev_avb is None:
             print "prev_avb: {0}".format(prev_avb)
             text_file.write("param prev_avb := {0};\n".format(make_1d_string(prev_avb)))
             text_file.write("param prev_rvb := {0};\n".format(make_1d_string(prev_rvb)))
         text_file.write("end;\n")
 
-    model = "models/vbmap-gen.mod" if prev_avb == None else "models/vbmap-gen-with-prev.mod";
+    model = "models/vbmap-gen.mod" if prev_avb is None else "models/vbmap-gen-with-prev.mod";
     result = call([SOLVER,
                    "-m", model,
                    "-d", cluster_file,
                    "-o", result_file])
     # TODO: handle solver failure
     return result
+
 
 class VbMapProblem:
     def __init__(self, node_count, replica_count, slave_factor, previous=None):
@@ -189,6 +200,7 @@ class VbMapProblem:
                                                        self.replica_count,
                                                        self.slave_factor,
                                                        actuals)
+
     def generate_vbmap(self):
         if not self.replica_networks:
             self.generate_replica_networks()
@@ -276,15 +288,11 @@ class VbMapProblem:
         print "zr:\n{0}".format(twod_array_to_string(zr))
 
 
-previous = VbMapProblem(args.n - 1, args.r, args.s)
-problem  = VbMapProblem(args.n, args.r, args.s, previous)
+prev = VbMapProblem(args.n - 1, args.r, args.s)
+problem = VbMapProblem(args.n, args.r, args.s, prev)
 problem.generate_replica_networks()
 problem.generate_vbmap()
 problem.print_result()
-
-
-
-
 
 
 
