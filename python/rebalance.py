@@ -61,11 +61,9 @@ def generate_vbmap (replica_networks):
                   "param conn :=\n" \
                   "{2};\n" \
                   "end;"
-
     with open("cluster2.data", "w") as text_file:
         text_file.write(data_string.format(args.n, args.r, make_replica_networks_string(replica_networks)))
-
-    call([LPSOLVER, "-m", "models/balance.mod", "-d", "cluster2.data", "-o", "result2.txt"])
+    call([LPSOLVER, "-m", "models/vbmap-gen.mod", "-d", "cluster2.data", "-o", "result2.txt"])
 
 replica_networks = build_replica_networks()
 #print make_replica_networks_string(replica_networks)
