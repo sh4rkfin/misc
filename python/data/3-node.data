@@ -1,0 +1,17 @@
+/*
+
+Simple data file for use with replica-map-gen.mod
+
+*/
+
+data;
+
+param n := 3;
+
+param r := 2;
+
+param s := 1;
+
+param pretty := 1;
+
+end;

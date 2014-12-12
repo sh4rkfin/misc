@@ -1,0 +1,30 @@
+/*
+
+Data file for use with the model vbmap-color-gen-with-prev.mod.
+
+This data file captures the move from a 2 node system to a 3 node system.
+
+There are 2 colors of vbuckets:
+* color 0: 512 active vbuckets on node 0 getting replicated to node 1
+* color 1: 512 active vbuckets on node 1 getting replicated to node 0
+
+*/
+
+data;
+
+param n := 3;
+param c := 2;
+param v := 1024;
+param tol := 2;
+
+param prev_avb :
+        0   1   2:=
+    0   512 0   0
+    1   0   512 0;
+
+param prev_rvb :
+        0   1   2:=
+    0   0   512 0
+    1   512 0   0;
+
+end;
