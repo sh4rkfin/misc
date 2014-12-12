@@ -37,7 +37,7 @@ s.t. connin{j in N}: sum{i in N, k in R} x[i,j,k] = r * s;
 
 s.t. noselfrep{i in N, k in R}: x[i,i,k] = 0;        /* no self replication */
 
-minimize obj: sum{i in N, j in N} (0);             /* minimize the excess */
+minimize obj: sum{i in N, j in N} (0);             /* degenerate minimization = simple feasibility */
 
 solve;
 
