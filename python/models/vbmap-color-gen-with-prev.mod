@@ -1,0 +1,146 @@
+/*
+ VBucket Map Generation.
+
+ TODO: file to be better named.
+ TODO: better commented
+
+ Try this file with ./data/10-node-2-replicas.data
+
+*/
+
+param n, integer, > 0;      /* number of nodes */
+
+param v, integer > 0;       /* number of vbuckets */
+
+param c, integer > 0;       /* number of colors */
+
+param tol, > 0;             /* tolerance as a percentage number */
+
+set N := 0..(n-1);          /* set of nodes */
+
+set C := 0..(c-1);          /* set of colors */
+
+var avb{k in C, i in N}, >= 0;      /* number of active vbuckets on each node */
+
+s.t. tot_vbuckets: sum{k in C, i in N} avb[k,i] = v;
+
+var rvb{k in C, i in N}, >= 0;      /* number of replica vbuckets on each node */
+
+s.t. tot_rvbuckets: sum{k in C, i in N} rvb[k,i] = v;
+
+var x{k in C, i in N, j in N}, integer, >= 0;
+/* x[i,j] = 1 number of vbuckets replicated from node i to node j */
+
+param prev_avb{k in C, i in N}, >= 0;
+param prev_rvb{k in C, i in N}, >= 0;
+/* param prev_x{i in N, j in N}, >= 0;      not sure if I need this */
+
+var za{k in C, i in N, j in N}, integer >= 0;
+/* movememt of active vbuckets i -> j */
+
+var zr{k in C, i in N, j in N}, integer >= 0;
+/* movememt of replica vbuckets i -> j */
+
+s.t. la_out{k in C, i in N}: prev_avb[k,i] = sum{j in N} za[k,i,j];
+/* prev active vbuckets = sum of the active moves */
+
+s.t. la_in{k in C, j in N}: avb[k,j] = sum{i in N} za[k,i,j];
+/* prev active vbuckets = sum of the active moves */
+
+s.t. lr_out{k in C, i in N}: rvb[k,i] = sum{j in N} zr[k,i,j];
+/* prev active vbuckets = sum of the active moves */
+
+s.t. lr_in{k in C, j in N}: prev_rvb[k,j] = sum{i in N} zr[k,i,j];
+/* prev active vbuckets = sum of the active moves */
+
+s.t. replicas_balance_out{k in C, i in N}: avb[k,i] = sum{j in N} x[k,i,j];
+s.t. replicas_balance_in{k in C, j in N}:  rvb[k,j] = sum{i in N} x[k,i,j];
+
+var ein{i in N}, >= 0;      /* excess inbound for node i */
+
+var eout{i in N}, >= 0;     /* excess outbound for node i */
+
+s.t. act_bal{i in N}: sum{k in C} avb[k,i] - ein[i] <= ceil(v/n);
+/*  active vbuckets on each node less the excess close to ceil(v/n)  */
+
+s.t. act_min{i in N}: sum{k in C} avb[k,i] >= floor((100 - tol) * v / (100 * n));
+/*  active vbuckets on each node within 5% of max */
+
+s.t. rep_bal{i in N}: sum{k in C} rvb[k,i] - eout[i] <= ceil(v / n);
+/*  outbound replication on each node + excess less than or equal to close to v/n  */
+
+s.t. rep_min{i in N}: sum{k in C} rvb[k,i] >= floor((100 - tol) * v / (100 * n));
+/*  outbound replication on each node + excess less than or equal to close to v/n  */
+
+s.t. noselfreplication{k in C, i in N}: x[k,i,i] = 0;
+/* no self replication */
+
+/* TODO: find some way to lightly penalize the number of connections used
+   Way to do it:
+   new variables:
+    var x_unit{i in N, j in N}, binary;
+    var x_more{i in N, j in N}, integer, >= 0;
+    x_unit + x_more = x for all i,j
+    add sum(x_unit) - r to the penalty function with light costing.
+    since sum(x_unit) is >= r (# of replicas)
+   */
+
+
+minimize obj: sum{i in N} (ein[i] + eout[i] +
+              sum{k in C, j in N}(if i = j then 0 else (za[k,i,j] + zr[k,i,j])));
+/* minimize the excess */
+
+solve;
+
+for {k in C} {
+
+    printf "\n";
+    printf{i in N} "active vbuckets on node %d: %4.1f\n", i, avb[k,i];
+    printf         "sum active vbuckets: %4.1f\n", sum{i in N} avb[k,i];
+    printf "\n";
+
+    printf "\n";
+    printf{i in N} "replica vbuckets on node %d: %4.1f\n", i, rvb[k,i];
+    printf         "sum replica vbuckets: %4.1f\n", sum{i in N} rvb[k,i];
+    printf "\n";
+
+    printf "\n";
+    for {i in N}
+    {
+       printf "pavb[%d]:\t%d\tavb[%d]:\t%d\n", i, prev_avb[k,i], i, avb[k,i];
+    }
+
+    printf "\n";
+    for {i in N}
+    {
+       printf "prvb[%d]:\t%d\trvb[%d]:\t%d\n", i, prev_rvb[k,i], i, rvb[k,i];
+    }
+
+    printf "\n";
+    for {i in N}
+    {
+       printf "x[%d]: ", i;
+       for {j in N} printf "\t%d", x[k,i,j];
+       printf("\n");
+    }
+
+    printf "\n";
+    for {i in N}
+    {
+       printf "za[%d]: ", i;
+       for {j in N} printf "\t%d", za[k,i,j];
+       printf("\n");
+    }
+
+    printf "\n";
+    for {i in N}
+    {
+       printf "zr[%d]: ", i;
+       for {j in N} printf "\t%d", zr[k,i,j];
+       printf("\n");
+    }
+
+}
+
+end;
+
