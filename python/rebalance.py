@@ -10,12 +10,15 @@
 
 import argparse
 from subprocess import call
+import os
+import sys
 import re
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
 parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of nodes", required=True)
 parser.add_argument("-r", "--replica-count", dest="r", type=int, help="number of replicas", default=1)
 parser.add_argument("-s", "--slave-factor", dest="s", type=int, help="slaves factor", default=1)
+parser.add_argument("-w", "--working", dest="working", type=str, help="working directory", default="./working")
 args = parser.parse_args()
 
 SOLVER = "/Users/dfinlay/eclipse-projects/glpk-4.35/examples/glpsol"
@@ -44,12 +47,12 @@ def build_replica_networks(node_count, replica_count, slave_factor, previous=Non
                     for _ in range(node_count)]
                     for _ in range(replica_count)]
 
-    cluster_file = "cluster-n{0}-r{1}-replicagen.data".format(node_count, replica_count)
+    cluster_file = "{0}/cluster-n{1}-r{2}-replicagen.data".format(args.working, node_count, replica_count)
     with open(cluster_file, "w") as text_file:
         text_file.write(data_string.format(node_count, replica_count, slave_factor,
                                            make_prev_connections_string(previous)))
 
-    result_file = "result-n{0}-r{1}-replicagen.txt".format(node_count, replica_count)
+    result_file = "{0}/result-n{1}-r{2}-replicagen.txt".format(args.working, node_count, replica_count)
     call([SOLVER,
           "-m", "models/replica-map-gen-with-prev.mod",
           "-d", cluster_file,
@@ -181,7 +184,7 @@ def generate_vbmap(node_count, replica_count, replica_networks, result_file,
                   "param tol := 2; " \
                   "param conn :=\n" \
                   "{2};\n"
-    cluster_file = "cluster-n{0}-r{1}-vbmap.data".format(node_count, replica_count)
+    cluster_file = "{0}/cluster-n{1}-r{2}-vbmap.data".format(args.working, node_count, replica_count)
     with open(cluster_file, "w") as text_file:
         text_file.write(data_string.format(node_count,
                                            replica_count,
@@ -252,7 +255,7 @@ class EmptyMultiDimArray(MultiDimArray):
 class VbMapProblem:
     def __init__(self, node_count, replica_count, slave_factor, previous=None):
         self.name = "n{0}-r{1}".format(node_count, replica_count)
-        self.result_file = "result-{0}-vbmap.txt".format(self.name)
+        self.result_file = "{0}/result-{1}-vbmap.txt".format(args.working, self.name)
         self.node_count = node_count
         self.replica_count = replica_count
         self.slave_factor = slave_factor
@@ -379,6 +382,12 @@ class VbMapProblem:
         xd = self.get_flow_increases()
         print "xd:\n{0}".format(twod_array_to_string(xd))
 
+if not os.path.exists(args.working):
+    os.makedirs(args.working)
+
+if not os.path.isdir(args.working):
+    print "path {0} exists but is not a directory, exiting"
+    sys.exit(1)
 
 prev = None
 if False:
