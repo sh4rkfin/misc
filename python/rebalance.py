@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 #
 # TODO: good header comment
-# TODO: convert all these nasty multi-dimensional array to maps
+# TODO: convert all these nasty multi-dimensional array to maps (maybe)
 # TODO: handle rack / zone awareness
-# TODO: put all generated files in common sub-directory
 # TODO: need to figure out how to deal with vbucket identity -
 #       may need to cost the difference in the flows in addition to / aswell as
 #       the difference in the number of vbuckets
