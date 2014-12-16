@@ -94,17 +94,17 @@ solve;
 
 for {k in C} {
 
-    printf "\n";
-    printf{i in N} "active vbuckets on node %d: %4.1f\n", i, avb[k,i];
-    printf         "sum active vbuckets: %4.1f\n", sum{i in N} avb[k,i];
-    printf "\n";
-
-    printf "\n";
-    printf{i in N} "replica vbuckets on node %d: %4.1f\n", i, rvb[k,i];
-    printf         "sum replica vbuckets: %4.1f\n", sum{i in N} rvb[k,i];
+    printf "\n", k;
+    printf "Color: %d \n", k;
+    printf "---------\n", k;
+    printf{i in N} "avb[%d]:\t%.1f\n", i, avb[k,i];
+    printf         "sum:\t%5.1f\n", sum{i in N} avb[k,i];
     printf "\n";
 
+    printf{i in N} "rvb[%d]:\t%.1f\n", i, rvb[k,i];
+    printf         "sum:\t%4.1f\n", sum{i in N} rvb[k,i];
     printf "\n";
+
     for {i in N}
     {
        printf "pavb[%d]:\t%d\tavb[%d]:\t%d\n", i, prev_avb[k,i], i, avb[k,i];
