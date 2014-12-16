@@ -3,6 +3,7 @@
 *.test
 *~
 *.iml
+*.pyc
 .DS_Store
 .project
 bin/
