@@ -3,6 +3,7 @@ import unittest
 
 from multidimarray import MultiDimArray
 
+
 class MultiDimArrayTestCase(unittest.TestCase):
     def test_basic(self):
         array = MultiDimArray({}, 4, 3, 2)
@@ -50,9 +51,9 @@ class MultiDimArrayTestCase(unittest.TestCase):
         for i, v in enumerate(array):
             for j, w in enumerate(v):
                 for k, x in enumerate(w):
-                    #print "array[{0},{1},{2}]: {3}".format(i, j, k, x)
+                    # print "array[{0},{1},{2}]: {3}".format(i, j, k, x)
                     count += 1
-                    if i == 1 and j ==2 and k == 1:
+                    if i == 1 and j == 2 and k == 1:
                         self.assertEqual(x, 10)
                     else:
                         self.assertEqual(x, 0)

@@ -43,4 +43,3 @@ class EmptyMultiDimArray(MultiDimArray):
         if self.dim_count > 1:
             return EmptyMultiDimArray.get_instance(self.dims[1:])
         return 0
-

@@ -11,10 +11,10 @@ class Node:
         if not self.children:
             return 0
         max([c.depth() for c in self.children]) + 1
-        #max_depth = 0
-        #for c in self.children:
-        #    max_depth = max(c.depth(), max_depth)
-        #return max_depth + 1
+        # max_depth = 0
+        # for c in self.children:
+        #     max_depth = max(c.depth(), max_depth)
+        # return max_depth + 1
 
 a = Node([])
 b = Node([a])

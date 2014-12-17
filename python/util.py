@@ -16,6 +16,3 @@ def ensure_has_capacity(array, size, default_value_function=None):
         for _ in range(size - current_size):
             val = default_value_function() if default_value_function else 0
             array.append(val)
-
-
-
