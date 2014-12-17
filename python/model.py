@@ -4,6 +4,7 @@ from string import Template
 
 SOLVER = "/Users/dfinlay/eclipse-projects/glpk-4.35/examples/glpsol"
 
+
 def glpsol_solve(model, data_file_name, result_file_name):
     result = call([SOLVER,
                    "-m", model,
@@ -15,6 +16,7 @@ def glpsol_solve(model, data_file_name, result_file_name):
     if status[1] != 'OPTIMAL':
         return status
     return 0
+
 
 def solve(working_dir, model, data_file_name_template, data_file_template, result_file_name_template, params):
     if not working_dir:
@@ -37,6 +39,7 @@ def read_status(file_name):
         result.append(matcher.group(2))
     util.parse(file_name, "Status:\s*(\w+)\s*(\w+)", status_shredder)
     return result
+
 
 def read_1d_variable(filename, var_name):
     result = []
@@ -116,8 +119,8 @@ class Model:
         return self.data_file_template
 
     def solve(self, params, data_file_name_template, result_file_name_template, working_dir):
-        instance = ModelInstance(self.model,
-                                 self.params,
+        instance = ModelInstance(self.model_name,
+                                 params,
                                  data_file_name_template,
                                  result_file_name_template,
                                  working_dir)
