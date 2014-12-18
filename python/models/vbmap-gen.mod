@@ -37,6 +37,9 @@ var x{i in N, j in N}, integer, >= 0;
 s.t. conn_const{i in N, j in N}: (1 - sum{k in R}conn[i,j,k]) * x[i,j] = 0;
 /* connection constraint; only use permitted connections */
 
+s.t. conn_smooth{k in R, i in N, j in N}: conn[i,j,k] * x[i,j] <= ceil( v / (n * sum{m in N}conn[i,m,k]) );
+/* add constraint to smoothly distribute replicas to each slave from a given node */
+
 s.t. replicas_balance_out{i in N, k in R}: sum{j in N}(conn[i,j,k] * x[i,j]) - avb[i] = 0;
 s.t. replicas_balance_in{j in N}: sum{i in N} x[i,j] - rvb[j] = 0;
 
