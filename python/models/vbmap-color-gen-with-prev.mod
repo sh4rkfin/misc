@@ -29,7 +29,7 @@ var rvb{k in C, i in N}, >= 0;      /* number of replica vbuckets on each node *
 s.t. tot_rvbuckets: sum{k in C, i in N} rvb[k,i] = v;
 
 var x{k in C, i in N, j in N}, integer, >= 0;
-/* x[i,j] = 1 number of vbuckets replicated from node i to node j */
+/* x[k,i,j] = 1 number of vbuckets replicated from node i to node j */
 
 param prev_avb{k in C, i in N}, >= 0;
 param prev_rvb{k in C, i in N}, >= 0;
@@ -71,6 +71,9 @@ s.t. rep_bal{i in N}: sum{k in C} rvb[k,i] - eout[i] <= ceil(v / n);
 
 s.t. rep_min{i in N}: sum{k in C} rvb[k,i] >= floor((100 - tol) * v / (100 * n));
 /*  outbound replication on each node + excess less than or equal to close to v/n  */
+
+s.t. rep_smooth{i in N, j in N}: sum{k in C} x[k,i,j] <= ceil( v / ( n * (n-1) ) );
+/* outbound replication on each node + excess less than or equal to close to v/n  */
 
 s.t. noselfreplication{k in C, i in N}: x[k,i,i] = 0;
 /* no self replication */
@@ -139,8 +142,19 @@ for {k in C} {
        for {j in N} printf "\t%d", zr[k,i,j];
        printf("\n");
     }
-
 }
+
+printf "\n";
+printf{i in N} "avb[%d]:\t%.1f\n", i, sum{k in C} avb[k,i];
+printf "\n";
+printf{i in N} "rvb[%d]:\t%.1f\n", i, sum{k in C} rvb[k,i];
+printf "\n";
+for {i in N} {
+   printf "x[%d]: ", i;
+   for {j in N} printf "\t%d", sum{k in C} x[k,i,j];
+   printf("\n");
+}
+
 
 end;
 
