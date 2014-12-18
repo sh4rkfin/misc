@@ -39,13 +39,14 @@ def get_replica_gen_model():
 
 def get_vbmap_gen_model():
     model_file_name = "models/vbmap-gen.mod"
-    data_string = "data; " \
-                  "param n := $n; " \
-                  "param r := $r; " \
-                  "param v := 1024; " \
-                  "param tol := 2; " \
+    data_string = "data;\n" \
+                  "param n := $n;\n" \
+                  "param r := $r;\n" \
+                  "param v := 1024;\n" \
+                  "param tol := 2;\n" \
                   "param conn :=\n" \
-                  "$prev_connections;\n"
+                  "$prev_connections;\n" \
+                  "end;"
     data_file_name_template = "cluster-n$n-r$r-vbmap.data"
     result_file_name_template = "result-n$n-r$r-vbmap.txt"
     m = model.Model(model_file_name, data_string)
