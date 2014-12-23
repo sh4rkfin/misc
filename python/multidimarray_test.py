@@ -59,5 +59,30 @@ class MultiDimArrayTestCase(unittest.TestCase):
                         self.assertEqual(x, 0)
         self.assertEqual(count, 24)
 
+    def test_is_iterable(self):
+        array = [1, 2, 3]
+        print type(array), "hasatter(__iter__): ", hasattr(array, '__iter__')
+        self.assertTrue(hasattr(array, '__iter__'))
+        array = MultiDimArray({2: 3}, 3)
+        self.assertTrue(hasattr(array, '__iter__'))
+        print type(array), "hasatter(__iter__): ", hasattr(array, '__iter__')
+        s = "123"
+        self.assertFalse(hasattr(s, '__iter__'))
+        print type(s), "hasattr(__iter__): ", hasattr(s, '__iter__')
+        self.assertTrue(hasattr(s, '__len__') and hasattr(s, '__getitem__'))
+        print type(s), "hasattr(__len__) && hasattr(__getitem__): ", \
+            hasattr(s, '__len__') and hasattr(s, '__getitem__')
+
+    def test_list_as_key(self):
+        m = {}
+        key = ['one', 1]
+        self.assertRaises(TypeError, m.__setitem__, key)
+        key = {'one': 1}
+        self.assertRaises(TypeError, m.__setitem__, key)
+        key = ('one', 1)
+        m[key] = 'found'
+        print "tuple:{0} key[0]:{1} key[1]:{2}".format(key, key[0], key[1])
+
+
 if __name__ == '__main__':
     unittest.main()
