@@ -13,6 +13,9 @@ import os
 import sys
 import util
 import model
+import copy
+from network import Arc, Node, Network
+from copy import deepcopy
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
 parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of nodes", required=True)
@@ -245,7 +248,28 @@ class VbMapProblem:
         else:
             self.vbmap_model = generate_vbmap(self.node_count, self.replica_count, self.replica_networks)
 
-    def get_active_vbuckets_with_colors(self):
+    def break_active_vbuckets_into_colors(self):
+        """
+        Returns a 2-d array representing the different colors of active
+        vbuckets in this problem.
+        E.g. if the solution the problem has the active vbuckets as
+                [ 3, 0, 5 ]
+        this methiod would return 2 arrays of:
+                [ 3, 0, 0 ]
+                [ 0, 0, 5 ]
+        where the first array represents the active vbuckets of color 0
+        and the second array the active vbuckets of color 1.
+
+        This method is related to the similarly named method for replica
+        vbuckets. To extend the previous example, let's imagine that
+        2 of the 3 active vbuckets of color 1 are replicated to node 1
+        and the remainder to node 2. Breaking apart the replica vbuckets
+        into colors would look like:
+                [ 0, 2, 1 ]
+                [ 3, 2, 0 ]
+        assuming a reasonable divide of the replicas for the active
+        vbuckets on node 2.
+        """
         if not self.avb_with_colors:
             avb = self.get_active_vbuckets()
             map = self.get_replication_map()
@@ -262,27 +286,35 @@ class VbMapProblem:
                     for j in range(self.node_count):
                         r[count][j] = map[i][j]
                     count += 1
+                    continue
             self.color_count = count
             self.avb_with_colors = a
             self.rvb_with_colors = r
         return self.avb_with_colors
 
-    def get_replica_vbuckets_with_colors(self):
+    def break_replica_vbuckets_into_colors(self):
         if not self.rvb_with_colors:
-            self.get_active_vbuckets_with_colors()
+            self.break_active_vbuckets_into_colors()
         return self.rvb_with_colors
+
+    def prev_avb(self):
+        prev_avb = self.previous.break_active_vbuckets_into_colors()
+        for val in prev_avb:
+            util.ensure_has_capacity(val, self.node_count)
+        return prev_avb
+
+    def prev_rvb(self):
+        prev_rvb = self.previous.break_replica_vbuckets_into_colors()
+        for val in prev_rvb:
+            util.ensure_has_capacity(val, self.node_count)
+        return prev_rvb
 
     def generate_vbmap_with_colors(self):
         if not self.previous:
             self.generate_vbmap()
             return
-        prev_avb = self.previous.get_active_vbuckets_with_colors()
-        for val in prev_avb:
-            util.ensure_has_capacity(val, self.node_count)
-        prev_rvb = self.previous.get_replica_vbuckets_with_colors()
-        for val in prev_rvb:
-            util.ensure_has_capacity(val, self.node_count)
-        m = get_vbmap_gen_with_colors_model()
+        prev_avb = self.prev_avb()
+        prev_rvb = self.prev_rvb()
         params = dict(n=self.node_count,
                       c=self.previous.color_count,
                       prev_avb=twod_array_to_string(prev_avb, True, ":="),
@@ -311,23 +343,75 @@ class VbMapProblem:
         return self.xd
 
     def get_active_vbuckets(self):
-        return list(self.vbmap_model.get_1d_variable("avb"))
+        return list(self.vbmap_model.get_variable("avb"))
 
     def get_replica_vbuckets(self):
-        return list(self.vbmap_model.get_1d_variable("rvb"))
+        return list(self.vbmap_model.get_variable("rvb"))
 
     def is_colored_vbmap_problem(self):
         return self.vbmap_model.get_model_name().find("color") >= 0
 
     def get_active_vbucket_moves(self):
+        return self.vbmap_model.get_variable("za")
+
+    def get_total_active_vbucket_moves(self):
+        moves = self.get_active_vbucket_moves()
         if self.is_colored_vbmap_problem():
-            return self.vbmap_model.get_3d_variable("za")
-        return self.vbmap_model.get_2d_variable("za")
+            result = 0
+            for x in moves:
+                result += util.sum_off_diagonal(x)
+        else:
+            result = util.sum_off_diagonal(moves)
+        return result
+
+    def get_total_replica_vbucket_moves(self):
+        moves = self.get_replica_vbucket_moves()
+        if self.is_colored_vbmap_problem():
+            result = 0
+            for x in moves:
+                result += util.sum_off_diagonal(x)
+        else:
+            result = util.sum_off_diagonal(moves)
+        return result
+
+    def create_network(self, color):
+        if not self.is_colored_vbmap_problem():
+            raise ValueError("VbMapProblem instance is not a colored map problem")
+        network = Network()
+        za = self.get_active_vbucket_moves()[color]
+        for i, a in enumerate(self.prev_avb()):
+            node = Node(("prev_avb", i))
+            network.add_node(node)
+            for j, x in enumerate(za[i]):
+                if x > 0:
+                    to_node = Node(('avb', j))
+                    node.add_arc(Arc(to_node, x))
+        for i, a in enumerate(self.get_active_vbuckets()):
+            key = ("prev_avb", i)
+            node = Node(key)
+            network.add_node(node)
+            for j, x in enumerate(za[i]):
+                if x > 0:
+                    to_node = Node(('avb', j))
+                    node.add_arc(Arc(to_node, x))
+
+    # Network looks like follows:
+    #
+    #   prev_avb
+    #   avb
+    #   rvb
+    #   prev_rvb
+    #
+    def break_down_flows(self, color):
+        za = copy.deepcopy(self.get_active_vbucket_moves()[color])
+        path = []
+        for i, x in enumerate(za):
+            for j, y in enumerate(x):
+                if y > 0:
+                    pass
 
     def get_replica_vbucket_moves(self):
-        if self.is_colored_vbmap_problem():
-            return self.vbmap_model.get_3d_variable("zr")
-        return self.vbmap_model.get_2d_variable("zr")
+        return self.vbmap_model.get_variable("zr")
 
     def get_actual_replica_networks(self):
         rep_map = self.get_replication_map()
@@ -390,41 +474,6 @@ problem.generate_replica_networks()
 problem.generate_vbmap_with_colors()
 #problem.print_result()
 
-moves = problem.get_active_vbucket_moves()
-val = 0
-for i, x in enumerate(moves):
-    for j, y in enumerate(x):
-        for k, z in enumerate(y):
-            if k != j:
-                val += z
-print "active moves: ", val
-moves = problem.get_replica_vbucket_moves()
-val = 0
-for i, x in enumerate(moves):
-    for j, y in enumerate(x):
-        for k, z in enumerate(y):
-            if k != j:
-                val += z
-print "replica moves: ", val
-
-prev_avb = problem.get_active_vbuckets_with_colors()
-
-print "prev_avb"
-for i in range(problem.color_count):
-    print "{0} ".format(i),
-    for j in range(problem.node_count):
-        print "{0} ".format(prev_avb[i][j]),
-    print
-
-prev_rvb = problem.get_replica_vbuckets_with_colors()
-print "prev_rvb"
-for i in range(problem.color_count):
-    print "{0} ".format(i),
-    for j in range(problem.node_count):
-        print "{0} ".format(prev_rvb[i][j]),
-    print
-
-
-#problem.generate_vbmap()
-#problem.print_result()
+print "active moves: ", problem.get_total_active_vbucket_moves()
+print "replica moves: ", problem.get_total_replica_vbucket_moves()
 
