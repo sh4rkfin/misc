@@ -108,36 +108,31 @@ for {k in C} {
     printf         "sum:\t%4.1f\n", sum{i in N} rvb[k,i];
     printf "\n";
 
-    for {i in N}
-    {
+    for {i in N} {
        printf "pavb[%d]:\t%d\tavb[%d]:\t%d\n", i, prev_avb[k,i], i, avb[k,i];
     }
 
     printf "\n";
-    for {i in N}
-    {
+    for {i in N} {
        printf "prvb[%d]:\t%d\trvb[%d]:\t%d\n", i, prev_rvb[k,i], i, rvb[k,i];
     }
 
     printf "\n";
-    for {i in N}
-    {
-       printf "x[%d]: ", i;
-       for {j in N} printf "\t%d", x[k,i,j];
-       printf("\n");
-    }
-
-    printf "\n";
-    for {i in N}
-    {
+    for {i in N} {
        printf "za[%d]: ", i;
        for {j in N} printf "\t%d", za[k,i,j];
        printf("\n");
     }
 
     printf "\n";
-    for {i in N}
-    {
+    for {i in N} {
+       printf "x[%d]: ", i;
+       for {j in N} printf "\t%d", x[k,i,j];
+       printf("\n");
+    }
+
+    printf "\n";
+    for {i in N} {
        printf "zr[%d]: ", i;
        for {j in N} printf "\t%d", zr[k,i,j];
        printf("\n");
