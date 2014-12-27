@@ -16,5 +16,16 @@ class NetworkTestCase(unittest.TestCase):
         nw.find_node('one').add_arc(arc)
         self.assertEqual(nw.find_node('three'), three)
 
+    def test_dont_lose_nodes(self):
+        n1 = Node(1)
+        n2 = Node(2)
+        n1.add_arc(Arc(n2))
+        nw = Network([n1])
+        self.assertEqual(nw.find_node(2), n2)
+        n3 = Node(3)
+        n2.add_arc(Arc(n3))
+        self.assertEqual(nw.find_node(3), n3)
+
+
 if __name__ == '__main__':
     unittest.main()
