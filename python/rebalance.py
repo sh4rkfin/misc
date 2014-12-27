@@ -234,9 +234,9 @@ class VbMapProblem:
         if not self.replica_networks:
             self.generate_replica_networks()
         if self.previous:
-            avb = self.previous.get_active_vbuckets()
+            avb = list(self.previous.get_active_vbuckets())
             util.ensure_has_capacity(avb, self.node_count)
-            rvb = self.previous.get_replica_vbuckets()
+            rvb = list(self.previous.get_replica_vbuckets())
             util.ensure_has_capacity(rvb, self.node_count)
             rep_map = self.previous.get_replication_map()
             self.vbmap_model = generate_vbmap_with_prev(self.node_count,
@@ -298,13 +298,13 @@ class VbMapProblem:
         return self.rvb_with_colors
 
     def prev_avb(self):
-        prev_avb = self.previous.break_active_vbuckets_into_colors()
+        prev_avb = list(self.previous.break_active_vbuckets_into_colors())
         for val in prev_avb:
             util.ensure_has_capacity(val, self.node_count)
         return prev_avb
 
     def prev_rvb(self):
-        prev_rvb = self.previous.break_replica_vbuckets_into_colors()
+        prev_rvb = list(self.previous.break_replica_vbuckets_into_colors())
         for val in prev_rvb:
             util.ensure_has_capacity(val, self.node_count)
         return prev_rvb
@@ -315,13 +315,14 @@ class VbMapProblem:
             return
         prev_avb = self.prev_avb()
         prev_rvb = self.prev_rvb()
+        print "prev_avb: ", prev_avb
         params = dict(n=self.node_count,
                       c=self.previous.color_count,
                       prev_avb=twod_array_to_string(prev_avb, True, ":="),
                       prev_rvb=twod_array_to_string(prev_rvb, True, ":="))
         m = get_vbmap_gen_with_colors_model()
         m.working_dir = self.working_dir
-        m.solve(params)
+        m.solve(params, ['--nomip'])
         self.vbmap_model = m
 
     def get_replication_map(self):
@@ -329,6 +330,9 @@ class VbMapProblem:
             map = self.vbmap_model.get_2d_variable_as_map("x")
             self.replication_map = MultiDimArray(map, self.node_count, self.node_count)
         return self.replication_map
+
+    def get_colored_replication_map(self):
+        return self.vbmap_model.get_variable("x")
 
     def get_flow_increases(self):
         if not self.xi:
@@ -343,10 +347,26 @@ class VbMapProblem:
         return self.xd
 
     def get_active_vbuckets(self):
-        return list(self.vbmap_model.get_variable("avb"))
+        result = self.vbmap_model.get_variable("avb")
+        if util.dimension_count(result) == 2:
+            util.accumulate(result, util.add_to)
+        return result
+
+    def get_colored_avb(self):
+        if not self.is_colored_vbmap_problem():
+            raise ValueError("not a colored vbmap problem")
+        return self.vbmap_model.get_variable("avb")
+
+    def get_colored_rvb(self):
+        if not self.is_colored_vbmap_problem():
+            raise ValueError("not a colored vbmap problem")
+        return self.vbmap_model.get_variable("rvb")
 
     def get_replica_vbuckets(self):
-        return list(self.vbmap_model.get_variable("rvb"))
+        result = self.vbmap_model.get_variable("rvb")
+        if util.dimension_count(result) == 2:
+            util.accumulate(result, util.add_to)
+        return result
 
     def is_colored_vbmap_problem(self):
         return self.vbmap_model.get_model_name().find("color") >= 0
@@ -379,36 +399,37 @@ class VbMapProblem:
             raise ValueError("VbMapProblem instance is not a colored map problem")
         network = Network()
         za = self.get_active_vbucket_moves()[color]
-        for i, a in enumerate(self.prev_avb()):
-            node = Node(("prev_avb", i))
-            network.add_node(node)
-            for j, x in enumerate(za[i]):
-                if x > 0:
-                    to_node = Node(('avb', j))
-                    node.add_arc(Arc(to_node, x))
-        for i, a in enumerate(self.get_active_vbuckets()):
-            key = ("prev_avb", i)
-            node = Node(key)
-            network.add_node(node)
-            for j, x in enumerate(za[i]):
-                if x > 0:
-                    to_node = Node(('avb', j))
-                    node.add_arc(Arc(to_node, x))
-
-    # Network looks like follows:
-    #
-    #   prev_avb
-    #   avb
-    #   rvb
-    #   prev_rvb
-    #
-    def break_down_flows(self, color):
-        za = copy.deepcopy(self.get_active_vbucket_moves()[color])
-        path = []
-        for i, x in enumerate(za):
-            for j, y in enumerate(x):
-                if y > 0:
-                    pass
+        for i, a in enumerate(self.prev_avb()[color]):
+            if a > 0:
+                node = Node(("prev_avb", i), a)
+                network.add_node(node)
+                for j, x in enumerate(za[i]):
+                    if x > 0:
+                        to_node = network.find_or_create_node(('avb', j))
+                        node.add_arc(Arc(to_node, x))
+        avb = self.get_colored_avb()[color]
+        print "avb: ", avb
+        x = self.get_colored_replication_map()[color]
+        for i in range(len(x)):
+            print "x[{0}]: ".format(i), x[i]
+        for i, a in enumerate(avb):
+            if a > 0:
+                node = network.find_or_create_node(("avb", i))
+                for j, y in enumerate(x[i]):
+                    if y > 0:
+                        to_node = network.find_or_create_node(('rvb', j))
+                        node.add_arc(Arc(to_node, y))
+        zr = self.get_replica_vbucket_moves()[color]
+        for i, a in enumerate(self.prev_rvb()[color]):
+            if a > 0:
+                node = network.find_or_create_node(("prev_rvb", i))
+                node.set_source(-a)
+                for j in range(len(zr)):
+                    y = zr[j][i]
+                    if y > 0:
+                        from_node = network.find_node(('rvb', j))
+                        from_node.add_arc(Arc(node, y))
+        return network
 
     def get_replica_vbucket_moves(self):
         return self.vbmap_model.get_variable("zr")
@@ -476,4 +497,16 @@ problem.generate_vbmap_with_colors()
 
 print "active moves: ", problem.get_total_active_vbucket_moves()
 print "replica moves: ", problem.get_total_replica_vbucket_moves()
+
+rank = {'prev_avb': 0, 'avb': 1, 'rvb': 2, 'prev_rvb': 3}
+
+def compare(n1, n2):
+    r1, r2 = rank[n1.key[0]], rank[n2.key[0]]
+    if r1 == r2:
+        return -1 if n1.key < n2.key else 1 if n1.key > n2.key else 0
+    return r1 - r2
+
+n = problem.create_network(problem.previous.color_count - 1)
+n.draw(compare)
+n.break_into_flows()
 
