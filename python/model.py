@@ -5,11 +5,14 @@ from string import Template
 SOLVER = "/Users/dfinlay/eclipse-projects/glpk-4.35/examples/glpsol"
 
 
-def glpsol_solve(model, data_file_name, result_file_name):
-    result = call([SOLVER,
-                   "-m", model,
-                   "-d", data_file_name,
-                   "-o", result_file_name])
+def glpsol_solve(model, data_file_name, result_file_name, options=None):
+    cmd = [SOLVER,
+           "-m", model,
+           "-d", data_file_name,
+           "-o", result_file_name]
+    if options is not None:
+        cmd.extend(options)
+    result = call(cmd)
     if result != 0:
         return result
     status = read_status(result_file_name)
@@ -18,7 +21,13 @@ def glpsol_solve(model, data_file_name, result_file_name):
     return 0
 
 
-def solve(working_dir, model, data_file_name_template, data_file_template, result_file_name_template, params):
+def solve(working_dir,
+          model,
+          data_file_name_template,
+          data_file_template,
+          result_file_name_template,
+          params,
+          options=None):
     if not working_dir:
         working_dir = "."
 
@@ -28,7 +37,7 @@ def solve(working_dir, model, data_file_name_template, data_file_template, resul
         text_file.write(data_file_template.substitute(params))
 
     result_file = working_dir + "/" + result_file_name_template.substitute(params)
-    return glpsol_solve(model, cluster_file_name, result_file)
+    return glpsol_solve(model, cluster_file_name, result_file, options)
 
 
 def read_status(file_name):
@@ -44,14 +53,14 @@ def read_status(file_name):
 def read_variable(filename, var_name):
     result = []
     # groups for the following regular expression
-    #             (g1) (g2(g3)(g4(g5))        (g6)    (g7)
-    regex = "{0}\[(\d+)(,(\d+)(,(\d+))?)?\]\s*(\*)?\s*(\d+)".format(var_name)
+    #             (g1) (g2(g3)(g4(g5))        (g6)    (g7 (g8))
+    regex = "{0}\[(\d+)(,(\d+)(,(\d+))?)?\]\s*([A-Z\*]+)?\s*(\d+(\.\d+)?)".format(var_name)
 
     def my_proc(m):
         i = int(m.group(1))
         j = int(m.group(3)) if m.group(3) is not None else None
         k = int(m.group(5)) if m.group(5) is not None else None
-        val = int(m.group(7))
+        val = float(m.group(7))
         if j is not None:
             util.ensure_has_capacity(result, i + 1, lambda: [])
             if k is not None:
@@ -63,7 +72,7 @@ def read_variable(filename, var_name):
                 result[i][j] = val
         else:
             util.ensure_has_capacity(result, i + 1)
-            result[i] = int(m.group(7))
+            result[i] = val
 
     util.parse(filename, regex, my_proc)
     return result
@@ -131,7 +140,7 @@ class ModelInstance:
     def get_result_file(self):
         return self.working_dir + "/" + self.result_file_name_template.substitute(self.params)
 
-    def solve(self, params):
+    def solve(self, params, options=None):
         self.params = params
         cluster_file_name = self.get_data_file_name()
 
@@ -145,7 +154,8 @@ class ModelInstance:
                      self.data_file_name_template,
                      self.model.get_data_file_template(),
                      self.result_file_name_template,
-                     self.params)
+                     self.params,
+                     options)
 
     def get_variable_cache(self, name):
         return self.variables[name]
