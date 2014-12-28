@@ -101,10 +101,10 @@ def read_variable(filename, var_name):
 
 def read_2d_variable_as_map(filename, var_name):
     result = {}
-    regex = "{0}\[(\d+),(\d+)\]\s*(\*)?\s*(\d+)".format(var_name)
+    regex = "{0}\[(\d+),(\d+)\]\s*(\*)?\s*(\d+(\.\d+)?)".format(var_name)
 
     def my_proc(m):
-        value = int(m.group(4))
+        value = float(m.group(4))
         if value == 0:
             return
         row = int(m.group(1))
