@@ -22,6 +22,8 @@ parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of no
 parser.add_argument("-r", "--replica-count", dest="r", type=int, help="number of replicas", default=1)
 parser.add_argument("-s", "--slave-factor", dest="s", type=int, help="slaves factor", default=1)
 parser.add_argument("-w", "--working", dest="working", type=str, help="working directory", default="./working")
+parser.add_argument("-e", "--existing-solution", dest="existing", action='store_true', help="use existing solution",
+                    default=False)
 args = parser.parse_args()
 
 def get_replica_gen_model():
@@ -93,7 +95,7 @@ def get_vbmap_gen_with_colors_model():
     return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
 
 
-def build_replica_networks(node_count, replica_count, slave_factor, previous=None):
+def build_replica_networks(node_count, replica_count, slave_factor, previous=None, use_existing_solution=False):
     if previous is None:
         previous = [[[0 for _ in range(node_count)]
                     for _ in range(node_count)]
@@ -105,6 +107,7 @@ def build_replica_networks(node_count, replica_count, slave_factor, previous=Non
                   prev_connections=prev_connections_string)
     m = get_replica_gen_model()
     m.working_dir = args.working
+    m.set_use_existing_solution(use_existing_solution)
     result = m.solve(params)
     if result != 0:
         print "No solution to problem: return code is: ", result
@@ -177,17 +180,25 @@ def make_1d_string(array):
     return result
 
 
-def generate_vbmap(node_count, replica_count, replica_networks):
+def generate_vbmap(node_count, replica_count, replica_networks, use_existing_solution=False):
     model = get_vbmap_gen_model()
     params = dict(n=node_count,
                   r=replica_count,
                   prev_connections=make_3d_param_string(replica_networks))
     model.working_dir = args.working
+    model.set_use_existing_solution(use_existing_solution)
     model.solve(params)
     return model
 
 
-def generate_vbmap_with_prev(node_count, replica_count, replica_networks, prev_avb, prev_rvb, prev_x):
+def generate_vbmap_with_prev(node_count,
+                             replica_count,
+                             replica_networks,
+                             prev_avb,
+                             prev_rvb,
+                             prev_x,
+                             use_existing_solution=False
+):
     m = get_vbmap_gen_model()
     prev_x = MultiDimArray(prev_x.values, node_count, node_count)
     params = dict(n=node_count,
@@ -197,6 +208,7 @@ def generate_vbmap_with_prev(node_count, replica_count, replica_networks, prev_a
                   prev_rvb=make_1d_string(prev_rvb),
                   prev_x=make_1d_string(prev_x))
     m.working_dir = args.working
+    m.set_use_existing_solution(use_existing_solution)
     m.solve(params)
     return m
 
@@ -217,6 +229,10 @@ class VbMapProblem:
         self.avb_with_colors = None
         self.rvb_with_colors = None
         self.vbmap_model = None
+        self._use_exising_solution = False
+
+    def set_use_existing_solution(self, value):
+        self._use_exising_solution = value
 
     def generate_replica_networks(self):
         actuals = None
@@ -227,7 +243,11 @@ class VbMapProblem:
                 util.ensure_has_capacity(actuals[k], self.node_count, lambda: [])
                 for i in range(len(actuals[k])):
                     util.ensure_has_capacity(actuals[k][i], self.node_count)
-        map = build_replica_networks(self.node_count, self.replica_count, self.slave_factor, actuals)
+        map = build_replica_networks(self.node_count,
+                                     self.replica_count,
+                                     self.slave_factor,
+                                     actuals,
+                                     self._use_exising_solution)
         self.replica_networks = MultiDimArray(map, self.replica_count, self.node_count, self.node_count)
 
     def generate_vbmap(self):
@@ -246,7 +266,10 @@ class VbMapProblem:
                                                         rvb,
                                                         rep_map)
         else:
-            self.vbmap_model = generate_vbmap(self.node_count, self.replica_count, self.replica_networks)
+            self.vbmap_model = generate_vbmap(self.node_count,
+                                              self.replica_count,
+                                              self.replica_networks,
+                                              self._use_exising_solution)
 
     def break_active_vbuckets_into_colors(self):
         """
@@ -322,6 +345,7 @@ class VbMapProblem:
                       prev_rvb=twod_array_to_string(prev_rvb, True, ":="))
         m = get_vbmap_gen_with_colors_model()
         m.working_dir = self.working_dir
+        m.set_use_existing_solution(self._use_exising_solution)
         m.solve(params, ['--nomip'])
         self.vbmap_model = m
 
@@ -487,10 +511,12 @@ use_prev = True
 prev = None
 if use_prev:
     prev = VbMapProblem(args.n - 1, args.r, min(args.s, args.n - 2), args.working)
+    prev.set_use_existing_solution(args.existing)
     prev.generate_replica_networks()
     prev.generate_vbmap()
     prev.print_result()
 problem = VbMapProblem(args.n, args.r, args.s, args.working, prev)
+problem.set_use_existing_solution(args.existing)
 problem.generate_replica_networks()
 problem.generate_vbmap_with_colors()
 #problem.print_result()

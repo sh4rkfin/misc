@@ -1,24 +1,45 @@
 import util
 from subprocess import call
 from string import Template
+import os
 
 SOLVER = "/Users/dfinlay/eclipse-projects/glpk-4.35/examples/glpsol"
 
 
-def glpsol_solve(model, data_file_name, result_file_name, options=None):
+def invoke_solver(model, data_file_name, result_file_name, options=None):
     cmd = [SOLVER,
            "-m", model,
            "-d", data_file_name,
            "-o", result_file_name]
     if options is not None:
         cmd.extend(options)
-    result = call(cmd)
-    if result != 0:
-        return result
+    return call(cmd)
+
+
+def read_solution_status(result_file_name):
     status = read_status(result_file_name)
     if status[1] != 'OPTIMAL':
         return status
     return 0
+
+
+def glpsol_solve(model, data_file_name, result_file_name, options=None):
+    result = invoke_solver(model, data_file_name, result_file_name, options)
+    if result != 0:
+        return result
+    return read_solution_status(result_file_name)
+
+
+def make_data_file_name(working_dir, data_file_name_template, params):
+    if not working_dir:
+        working_dir = "."
+    return working_dir + "/" + data_file_name_template.substitute(params)
+
+
+def make_result_file_name(working_dir, result_file_name_template, params):
+    if not working_dir:
+        working_dir = "."
+    return working_dir + "/" + result_file_name_template.substitute(params)
 
 
 def solve(working_dir,
@@ -27,17 +48,17 @@ def solve(working_dir,
           data_file_template,
           result_file_name_template,
           params,
-          options=None):
-    if not working_dir:
-        working_dir = "."
+          options=None,
+          use_existing_solution=False):
+    result_file = make_result_file_name(working_dir, result_file_name_template, params)
+    if use_existing_solution and os.path.isfile(result_file):
+        print "found existing solution in file: ", result_file
+        return read_solution_status(result_file)
 
-    cluster_file_name = working_dir + "/" + data_file_name_template.substitute(params)
-
-    with open(cluster_file_name, "w") as text_file:
+    data_file_name = make_data_file_name(working_dir, data_file_name_template, params)
+    with open(data_file_name, "w") as text_file:
         text_file.write(data_file_template.substitute(params))
-
-    result_file = working_dir + "/" + result_file_name_template.substitute(params)
-    return glpsol_solve(model, cluster_file_name, result_file, options)
+    return glpsol_solve(model, data_file_name, result_file, options)
 
 
 def read_status(file_name):
@@ -113,13 +134,7 @@ class Model:
         return self.data_file_template
 
     def solve(self, params, data_file_name_template, result_file_name_template, working_dir):
-        instance = ModelInstance(self.model_name,
-                                 params,
-                                 data_file_name_template,
-                                 result_file_name_template,
-                                 working_dir)
-        instance.solve(params)
-        return instance
+        raise TypeError("not supported for this type")
 
 
 class ModelInstance:
@@ -130,6 +145,7 @@ class ModelInstance:
         self.result_file_name_template = as_template(result_file_name_template)
         self.working_dir = working_dir
         self.variables = {'array': {}, 'map': {}}
+        self._use_existing_solution = False
 
     def get_data_file_name(self):
         return self.working_dir + "/" + self.data_file_name_template.substitute(self.params)
@@ -137,11 +153,19 @@ class ModelInstance:
     def get_model_name(self):
         return self.model.model_name
 
+    def set_use_existing_solution(self, value):
+        self._use_existing_solution = value
+
+    def set_params(self, params):
+        self.params = params
+
     def get_result_file(self):
         return self.working_dir + "/" + self.result_file_name_template.substitute(self.params)
 
-    def solve(self, params, options=None):
-        self.params = params
+    def solve(self, params=None, options=None):
+        if params is not None:
+            # just use the previously set params
+            self.params = params
         cluster_file_name = self.get_data_file_name()
 
         data_file_template = self.model.data_file_template
@@ -155,7 +179,8 @@ class ModelInstance:
                      self.model.get_data_file_template(),
                      self.result_file_name_template,
                      self.params,
-                     options)
+                     options,
+                     self._use_existing_solution)
 
     def get_variable_cache(self, name):
         return self.variables[name]
