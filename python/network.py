@@ -63,8 +63,10 @@ class Node:
 
 
 class Network:
+
     def __init__(self, nodes=None):
         self.node_map = {}
+        self.tol = 1e-3
         if nodes is not None:
             for n in nodes:
                 self.add_node(n)
@@ -120,13 +122,11 @@ class Network:
         # find max source
         while True:
             max_node = self.get_max_source_node()
-            if max_node.source <= 0:
+            if util.le(max_node.source, 0, self.tol):
                 break
             memo = {max_node: {'parent': None}}
             path = Network.resolve_flow(max_node, memo)
             path.reverse()
-            if path is None:
-                self.draw()
             min_flow = -1
             for p in path:
                 if min_flow == -1 or min_flow > p.flow:
@@ -139,8 +139,8 @@ class Network:
         self.draw()
 
     @staticmethod
-    def resolve_flow(node, memo):
-        if node.source < 0:
+    def resolve_flow(node, memo, tol=1e-3):
+        if util.lt(node.source, 0, tol):
             current, path = node, []
             parent = memo[current]['parent']
             while parent is not None:
@@ -150,11 +150,6 @@ class Network:
             return path
 
         arc = node.get_max_arc(Arc.get_flow)
-        if arc is None:
-            print "*** bad node: ", node
-        if arc.flow == 0:
-            # done
-            return
 
         memo[arc.to_node] = {'parent': node, 'arc': arc}
         return Network.resolve_flow(arc.to_node, memo)
