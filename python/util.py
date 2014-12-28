@@ -80,3 +80,14 @@ def arg_max(lst, key):
             max_val, result = key(a), a
     return result
 
+
+def eq(x, y, tol):
+    return abs(x - y) < tol
+
+
+def lt(x, y, tol):
+    return x < y and not eq(x, y, tol)
+
+
+def le(x, y, tol):
+    return x <= y or eq(x, y, tol)

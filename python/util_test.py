@@ -114,5 +114,16 @@ class UtilTestCase(unittest.TestCase):
         print "arg max:", arg_max
         self.assertEqual(arg_max, t2)
 
+    def test_tol_methods(self):
+        tol = 1e-3
+        val = 1e-4
+        self.assertTrue(util.eq(val, 0, tol))
+        self.assertTrue(util.le(val, 0, tol))
+        self.assertFalse(util.lt(val, 0, tol))
+        val = -1e-4
+        self.assertTrue(util.eq(val, 0, tol))
+        self.assertTrue(util.le(val, 0, tol))
+        self.assertFalse(util.lt(val, 0, tol))
+
 if __name__ == '__main__':
     unittest.main()
