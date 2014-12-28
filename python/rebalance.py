@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 #
 # TODO: good header comment
-# TODO: convert all these nasty multi-dimensional array to maps (maybe)
 # TODO: handle rack / zone awareness
-# TODO: need to figure out how to deal with vbucket identity -
-#       may need to cost the difference in the flows in addition to / aswell as
-#       the difference in the number of vbuckets
+#
 
 import argparse
-from multidimarray import MultiDimArray
 import os
 import sys
 import util
 import model
-import copy
+from multidimarray import MultiDimArray
 from network import Arc, Node, Network
-from copy import deepcopy
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
 parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of nodes", required=True)
@@ -95,7 +90,14 @@ def get_vbmap_gen_with_colors_model():
     return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
 
 
-def build_replica_networks(node_count, replica_count, slave_factor, previous=None, use_existing_solution=False):
+def build_replica_networks(node_count,
+                           replica_count,
+                           slave_factor,
+                           previous=None,
+                           working_dir='.',
+                           use_existing_solution=False):
+    if working_dir is None:
+        working_dir = '.'
     if previous is None:
         previous = [[[0 for _ in range(node_count)]
                     for _ in range(node_count)]
@@ -106,7 +108,7 @@ def build_replica_networks(node_count, replica_count, slave_factor, previous=Non
                   s=slave_factor,
                   prev_connections=prev_connections_string)
     m = get_replica_gen_model()
-    m.working_dir = args.working
+    m.working_dir = working_dir
     m.set_use_existing_solution(use_existing_solution)
     result = m.solve(params)
     if result != 0:
@@ -180,12 +182,18 @@ def make_1d_string(array):
     return result
 
 
-def generate_vbmap(node_count, replica_count, replica_networks, use_existing_solution=False):
+def generate_vbmap(node_count,
+                   replica_count,
+                   replica_networks,
+                   working_dir='.',
+                   use_existing_solution=False):
+    if working_dir is None:
+        working_dir = '.'
     model = get_vbmap_gen_model()
     params = dict(n=node_count,
                   r=replica_count,
                   prev_connections=make_3d_param_string(replica_networks))
-    model.working_dir = args.working
+    model.working_dir = working_dir
     model.set_use_existing_solution(use_existing_solution)
     model.solve(params)
     return model
@@ -197,8 +205,10 @@ def generate_vbmap_with_prev(node_count,
                              prev_avb,
                              prev_rvb,
                              prev_x,
-                             use_existing_solution=False
-):
+                             working_dir='.',
+                             use_existing_solution=False):
+    if working_dir is None:
+        working_dir = '.'
     m = get_vbmap_gen_model()
     prev_x = MultiDimArray(prev_x.values, node_count, node_count)
     params = dict(n=node_count,
@@ -207,7 +217,7 @@ def generate_vbmap_with_prev(node_count,
                   prev_avb=make_1d_string(prev_avb),
                   prev_rvb=make_1d_string(prev_rvb),
                   prev_x=make_1d_string(prev_x))
-    m.working_dir = args.working
+    m.working_dir = working_dir
     m.set_use_existing_solution(use_existing_solution)
     m.solve(params)
     return m
@@ -247,6 +257,7 @@ class VbMapProblem:
                                      self.replica_count,
                                      self.slave_factor,
                                      actuals,
+                                     self.working_dir,
                                      self._use_exising_solution)
         self.replica_networks = MultiDimArray(map, self.replica_count, self.node_count, self.node_count)
 
@@ -264,11 +275,14 @@ class VbMapProblem:
                                                         self.replica_networks,
                                                         avb,
                                                         rvb,
-                                                        rep_map)
+                                                        rep_map,
+                                                        self.working_dir,
+                                                        self._use_exising_solution)
         else:
             self.vbmap_model = generate_vbmap(self.node_count,
                                               self.replica_count,
                                               self.replica_networks,
+                                              self.working_dir,
                                               self._use_exising_solution)
 
     def break_active_vbuckets_into_colors(self):
