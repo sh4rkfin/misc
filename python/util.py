@@ -91,3 +91,7 @@ def lt(x, y, tol):
 
 def le(x, y, tol):
     return x <= y or eq(x, y, tol)
+
+
+def ge(x, y, tol):
+    return x >= y or eq(x, y, tol)
