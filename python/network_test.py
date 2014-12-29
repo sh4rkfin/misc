@@ -26,6 +26,18 @@ class NetworkTestCase(unittest.TestCase):
         n2.add_arc(Arc(n3))
         self.assertEqual(nw.find_node(3), n3)
 
+    def test_has_arc(self):
+        n1 = Node(1)
+        n2 = Node(2)
+        a = Arc(n2)
+        n1.add_arc(a)
+        self.assertTrue(n1.has_arc(a))
+
+    def test_to_node(self):
+        n2 = Node(2)
+        a = Arc(n2)
+        self.assertTrue(a.to_node == n2)
+
 
 if __name__ == '__main__':
     unittest.main()

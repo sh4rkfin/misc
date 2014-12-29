@@ -7,7 +7,7 @@
 import argparse
 import os
 import sys
-from vbmap import VbMapProblem
+import vbmap
 import util
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
@@ -30,12 +30,12 @@ if not os.path.isdir(args.working):
 use_prev = True
 prev = None
 if use_prev:
-    prev = VbMapProblem(args.n - 1, args.r, min(args.s, args.n - 2), args.working)
+    prev = vbmap.VbMapProblem(args.n - 1, args.r, min(args.s, args.n - 2), args.working)
     prev.set_use_existing_solution(args.existing)
     prev.generate_replica_networks()
     prev.generate_vbmap()
     prev.print_result()
-problem = VbMapProblem(args.n, args.r, args.s, args.working, prev)
+problem = vbmap.VbMapProblem(args.n, args.r, args.s, args.working, prev)
 problem.set_use_existing_solution(args.existing)
 problem.generate_replica_networks()
 problem.generate_vbmap_with_colors()
@@ -44,20 +44,11 @@ problem.generate_vbmap_with_colors()
 print "active moves: ", problem.get_total_active_vbucket_moves()
 print "replica moves: ", problem.get_total_replica_vbucket_moves()
 
-rank = {'prev_avb': 0, 'avb': 1, 'rvb': 2, 'prev_rvb': 3}
-
-
-def compare(n1, n2):
-    r1, r2 = rank[n1.key[0]], rank[n2.key[0]]
-    if r1 == r2:
-        return -1 if n1.key < n2.key else 1 if n1.key > n2.key else 0
-    return r1 - r2
-
 print "color count:", problem.previous.color_count
-print "creating network for color:", problem.previous.color_count - 1
-n = problem.create_network(problem.previous.color_count - 1)
-n.draw(compare)
-n.break_into_flows()
+plan = problem.make_plan()
+for p in plan:
+    print p
+
 print "active vbuckets"
 avb = problem.get_colored_avb()
 for a in avb:

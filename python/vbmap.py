@@ -93,6 +93,22 @@ def get_vbmap_gen_with_colors_connections_model():
     return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
 
 
+def node_compare(n1, n2):
+    """ Is a comparator for nodes created by VbMapProblem.create_network that compares the nodes
+        in the following order:
+            prev_avb, avb, rvb, prev_rvb
+        Ties are broken by comparing the keys of the nodes
+    :param n1: first node to compare
+    :param n2: second node to compare
+    :return:
+    """
+    rank = {'prev_avb': 0, 'avb': 1, 'rvb': 2, 'prev_rvb': 3}
+    r1, r2 = rank[n1.key[0]], rank[n2.key[0]]
+    if r1 == r2:
+        return -1 if n1.key < n2.key else 1 if n1.key > n2.key else 0
+    return r1 - r2
+
+
 def build_replica_networks(node_count,
                            replica_count,
                            slave_factor,
@@ -456,10 +472,10 @@ class VbMapProblem:
                         to_node = network.find_or_create_node(('avb', j))
                         node.add_arc(Arc(to_node, x))
         avb = self.get_colored_avb()[color]
-        print "avb: ", avb
+        # print "avb: ", avb
         x = self.get_colored_replication_map()[color]
-        for i in range(len(x)):
-            print "x[{0}]: ".format(i), x[i]
+        # for i in range(len(x)):
+        #     print "x[{0}]: ".format(i), x[i]
         for i, a in enumerate(avb):
             if a > 0:
                 node = network.find_or_create_node(("avb", i))
@@ -478,6 +494,42 @@ class VbMapProblem:
                         from_node = network.find_node(('rvb', j))
                         from_node.add_arc(Arc(node, y))
         return network
+
+    def interpret(self, path, flow):
+        result = []
+        idx = []
+        for n in path.nodes():
+            idx.append(n.key[1])
+        size = len(idx)
+        avb_changed = idx[0] != idx[1]
+        rvb_changed = idx[size - 1] != idx[size - 2]
+        if not avb_changed and not rvb_changed:
+            return result
+        result.append("select {0} vbuckets from those currently being replicated"
+                      " from node {1} to node {2}".format(flow, idx[0], idx[size - 1]))
+        if avb_changed:
+            result.append(" -> move the active vbuckets "
+                          "from node {1} to node {2}".format(flow, idx[0], idx[1]))
+        if rvb_changed:
+            result.append(" -> move the replica vbuckets "
+                          "from node {1} to node {2}".format(flow, idx[size - 1], idx[size - 2]))
+        return result
+
+    def make_plan_for_color(self, color):
+        n = self.create_network(color)
+        flows = n.break_into_flows()
+        result = []
+        for p, f in flows.items():
+            print "flow: ", f, p
+        for p, f in flows.items():
+            result.extend(self.interpret(p, f))
+        return result
+
+    def make_plan(self):
+        result = []
+        for i in range(self.previous.color_count):
+            result.extend(self.make_plan_for_color(i))
+        return result
 
     def get_replica_vbucket_moves(self):
         return self.vbmap_model.get_variable("zr")
