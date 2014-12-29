@@ -8,6 +8,7 @@ import argparse
 import os
 import sys
 from vbmap import VbMapProblem
+import util
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
 parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of nodes", required=True)
@@ -52,6 +53,27 @@ def compare(n1, n2):
         return -1 if n1.key < n2.key else 1 if n1.key > n2.key else 0
     return r1 - r2
 
+print "color count:", problem.previous.color_count
+print "creating network for color:", problem.previous.color_count - 1
 n = problem.create_network(problem.previous.color_count - 1)
 n.draw(compare)
 n.break_into_flows()
+print "active vbuckets"
+avb = problem.get_colored_avb()
+for a in avb:
+    print a
+avb = problem.get_active_vbuckets()
+print avb
+
+print "flows"
+x = problem.get_colored_replication_map()
+x_agg = util.accumulate(x, util.add_to)
+for a in x_agg:
+    print a
+
+print "replica vbuckets"
+rvb = problem.get_replica_vbuckets()
+print rvb
+rvb = problem.get_colored_rvb()
+for a in rvb:
+    print a

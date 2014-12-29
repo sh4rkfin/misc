@@ -73,6 +73,26 @@ def get_vbmap_gen_with_colors_model():
     return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
 
 
+def get_vbmap_gen_with_colors_connections_model():
+    model_file_name = "models/vbmap-color-gen-with-conn.mod"
+    data_string = "data;\n" \
+                  "param n := $n;\n" \
+                  "param c := $c;\n" \
+                  "param v := 1024;\n" \
+                  "param tol := 2;\n" \
+                  "param prev_avb :\n" \
+                  "$prev_avb;\n" \
+                  "param prev_rvb :\n" \
+                  "$prev_rvb;\n" \
+                  "param conn :\n" \
+                  "$connections;\n" \
+                  "end;\n"
+    data_file_name_template = "cluster-n$n-colorvbmap.data"
+    result_file_name_template = "result-n$n-colorvbmap.txt"
+    m = model.Model(model_file_name, data_string)
+    return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
+
+
 def build_replica_networks(node_count,
                            replica_count,
                            slave_factor,
@@ -213,7 +233,7 @@ class VbMapProblem:
         self.working_dir = working_dir
         self.replica_count = replica_count
         self.slave_factor = slave_factor
-        self.replica_networks = None
+        self._replica_networks = None
         self.replication_map = None
         self.previous = previous
         self.xi = None
@@ -223,6 +243,9 @@ class VbMapProblem:
         self.rvb_with_colors = None
         self.vbmap_model = None
         self._use_exising_solution = False
+
+    def get_replica_networks(self):
+        return self._replica_networks
 
     def set_use_existing_solution(self, value):
         self._use_exising_solution = value
@@ -242,10 +265,10 @@ class VbMapProblem:
                                      actuals,
                                      self.working_dir,
                                      self._use_exising_solution)
-        self.replica_networks = MultiDimArray(map, self.replica_count, self.node_count, self.node_count)
+        self._replica_networks = MultiDimArray(map, self.replica_count, self.node_count, self.node_count)
 
     def generate_vbmap(self):
-        if not self.replica_networks:
+        if not self._replica_networks:
             self.generate_replica_networks()
         if self.previous:
             avb = list(self.previous.get_active_vbuckets())
@@ -255,7 +278,7 @@ class VbMapProblem:
             rep_map = self.previous.get_replication_map()
             self.vbmap_model = generate_vbmap_with_prev(self.node_count,
                                                         self.replica_count,
-                                                        self.replica_networks,
+                                                        self._replica_networks,
                                                         avb,
                                                         rvb,
                                                         rep_map,
@@ -264,7 +287,7 @@ class VbMapProblem:
         else:
             self.vbmap_model = generate_vbmap(self.node_count,
                                               self.replica_count,
-                                              self.replica_networks,
+                                              self._replica_networks,
                                               self.working_dir,
                                               self._use_exising_solution)
 
@@ -330,17 +353,21 @@ class VbMapProblem:
         return prev_rvb
 
     def generate_vbmap_with_colors(self):
+        if self.replica_count != 1:
+            raise ValueError("color vbmap generation only supported for replica count of 1")
         if not self.previous:
             self.generate_vbmap()
             return
+        replica_nw = self._replica_networks[0]
         prev_avb = self.prev_avb()
         prev_rvb = self.prev_rvb()
         print "prev_avb: ", prev_avb
         params = dict(n=self.node_count,
                       c=self.previous.color_count,
                       prev_avb=twod_array_to_string(prev_avb, True, ":="),
-                      prev_rvb=twod_array_to_string(prev_rvb, True, ":="))
-        m = get_vbmap_gen_with_colors_model()
+                      prev_rvb=twod_array_to_string(prev_rvb, True, ":="),
+                      connections=twod_array_to_string(replica_nw, True, ":="))
+        m = get_vbmap_gen_with_colors_connections_model()
         m.working_dir = self.working_dir
         m.set_use_existing_solution(self._use_exising_solution)
         m.solve(params, ['--nomip'])
@@ -370,7 +397,7 @@ class VbMapProblem:
     def get_active_vbuckets(self):
         result = self.vbmap_model.get_variable("avb")
         if util.dimension_count(result) == 2:
-            util.accumulate(result, util.add_to)
+            result = util.accumulate(result, util.add_to)
         return result
 
     def get_colored_avb(self):
@@ -386,7 +413,7 @@ class VbMapProblem:
     def get_replica_vbuckets(self):
         result = self.vbmap_model.get_variable("rvb")
         if util.dimension_count(result) == 2:
-            util.accumulate(result, util.add_to)
+            result = util.accumulate(result, util.add_to)
         return result
 
     def is_colored_vbmap_problem(self):
@@ -459,7 +486,7 @@ class VbMapProblem:
         rep_map = self.get_replication_map()
         result = []
         for k in range(self.replica_count):
-            network = self.replica_networks[k]
+            network = self._replica_networks[k]
             util.ensure_has_capacity(result, k + 1, lambda: [])
             for i in range(self.node_count):
                 util.ensure_has_capacity(result[k], i + 1, lambda: [])
@@ -475,9 +502,9 @@ class VbMapProblem:
             for y in x:
                 print " {0}".format(y),
             print
-        for k in range(len(self.replica_networks)):
+        for k in range(len(self._replica_networks)):
             print "replica n/w {0}".format(k)
-            print twod_array_to_string(self.replica_networks[k])
+            print twod_array_to_string(self._replica_networks[k])
         avb = self.get_active_vbuckets()
         rvb = self.get_active_vbuckets()
         for i in range(len(avb)):
