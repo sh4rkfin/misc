@@ -4,9 +4,23 @@ class Arc:
     def __init__(self, to_node, flow=0):
         self.to_node = to_node
         self.flow = flow
+        self._cost = 0
+        self._capacity = float("inf")
 
     def get_flow(self):
         return self.flow
+
+    def set_cost(self, cost):
+        self._cost = cost
+
+    def set_capacity(self, capacity):
+        self._capacity = capacity
+
+    def cost(self):
+        return self._cost
+
+    def capacity(self):
+        return self._capacity
 
     def __repr__(self):
         return "->{0}".format(self.to_node.key)
@@ -37,7 +51,7 @@ class Node:
     def __str__(self):
         result = '{0} {1} -> '.format(self.key, self.source)
         for a in self.arcs:
-            result += str(a.to_node.key) + ' ' + str(a.flow) + ' '
+            result += "{0}f={1},c={2},u={3} ".format(str(a.to_node.key), a.flow, a.cost(), a.capacity())
         return result
 
     def __repr__(self):
@@ -99,12 +113,11 @@ class Path:
     def __getitem__(self, idx):
         return self._arcs[idx]
 
+    def get_min_value(self, value_getter):
+        return util.minimize(self._arcs, value_getter)
+
     def get_min_flow(self):
-        result = -1
-        for a in self._arcs:
-            if result == -1 or result > a.flow:
-                result = a.flow
-        return result
+        return self.get_min_value(Arc.get_flow)
 
     def __len__(self):
         return len(self._arcs)
@@ -123,6 +136,15 @@ class Path:
         if not self.is_cycle():
             self._node.change_source_flow(value)
             self.to_node().change_source_flow(-value)
+
+    def consume_flow(self, value):
+        if len(self) == 0:
+            return
+        for a in self._arcs:
+            a.flow += value
+        if not self.is_cycle():
+            self._node.change_source_flow(-value)
+            self.to_node().change_source_flow(+value)
 
 
 class Network:
@@ -158,6 +180,11 @@ class Network:
     def find_node(self, key):
         return self.node_map.get(key)
 
+    def find_node_satisfying(self, predicate):
+        for n in self.node_map.values():
+            if predicate(n):
+                return n
+
     def find_or_create_node(self, key):
         node = self.node_map.get(key)
         if node is None:
@@ -170,7 +197,7 @@ class Network:
         nodes = node_map.values()
         nodes.sort(comparator)
         for n in nodes:
-            print hex(id(n)), str(n)
+            print str(n)
 
     def get_max_source_node(self):
         max_source, max_node = 0, None
@@ -194,6 +221,45 @@ class Network:
             path.change_flow(-min_flow)
             result[path] = min_flow
         return result
+
+    def create_shortest_path_tree(self, source_node):
+        """
+        Creates and returns a shortest path tree rooted at source_node. Should be Bellman-Ford.
+        :param source_node: root of the shortest path tree
+        :return: the shortest path tree
+        """
+        memo = {}
+        current = source_node
+        memo[current] = {'state': 'unvisited', 'dist': 0, 'parent': None, 'arc': None}
+        while True:
+            current_dist = memo[current]['dist']
+            for a in current.arcs:
+                node = a.to_node
+                node_memo = memo.get(node)
+                if node_memo is None:
+                    memo[node] = {'state': 'unvisited', 'dist': float('inf')}
+                    node_memo = memo[node]
+                node_dist = node_memo['dist']
+                tentative_dist = current_dist + a.cost()
+                if tentative_dist < node_dist:
+                    node_memo['state'] = 'unvisited'
+                    # update tentative distance
+                    if tentative_dist < node_dist:
+                        node_memo['dist'] = tentative_dist
+                        node_memo['parent'] = current
+                        node_memo['arc'] = a
+            min_dist, arg_min = None, None
+            for n, m in memo.items():
+                if m['state'] == 'unvisited':
+                    if min_dist is None or min_dist > m['dist']:
+                        min_dist = m['dist']
+                        arg_min = n
+            memo[current]['state'] = 'visited'
+            if min_dist is None:
+                break
+            current = arg_min
+        return memo
+
 
     @staticmethod
     def resolve_flow(node, memo, tol=1e-3):
