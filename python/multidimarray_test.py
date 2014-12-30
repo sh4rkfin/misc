@@ -83,6 +83,5 @@ class MultiDimArrayTestCase(unittest.TestCase):
         m[key] = 'found'
         print "tuple:{0} key[0]:{1} key[1]:{2}".format(key, key[0], key[1])
 
-
 if __name__ == '__main__':
     unittest.main()
