@@ -9,6 +9,7 @@ import os
 import sys
 import vbmap
 import util
+import network
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
 parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of nodes", required=True)
@@ -38,33 +39,36 @@ if use_prev:
 problem = vbmap.VbMapProblem(args.n, args.r, args.s, args.working, prev)
 problem.set_use_existing_solution(args.existing)
 problem.generate_replica_networks()
-problem.generate_vbmap_with_colors()
-# problem.print_result()
+problem.solve_min_cost_flow(0)
 
-print "active moves: ", problem.get_total_active_vbucket_moves()
-print "replica moves: ", problem.get_total_replica_vbucket_moves()
+if False:
+    problem.generate_vbmap_with_colors()
+    problem.print_result()
 
-print "color count:", problem.previous.color_count
-plan = problem.make_plan()
-for p in plan:
-    print p
+    print "active moves: ", problem.get_total_active_vbucket_moves()
+    print "replica moves: ", problem.get_total_replica_vbucket_moves()
 
-print "active vbuckets"
-avb = problem.get_colored_avb()
-for a in avb:
-    print a
-avb = problem.get_active_vbuckets()
-print avb
+    print "color count:", problem.previous.color_count
+    plan = problem.make_plan()
+    for p in plan:
+        print p
 
-print "flows"
-x = problem.get_colored_replication_map()
-x_agg = util.accumulate(x, util.add_to)
-for a in x_agg:
-    print a
+    print "active vbuckets"
+    avb = problem.get_colored_avb()
+    for a in avb:
+        print a
+    avb = problem.get_active_vbuckets()
+    print avb
 
-print "replica vbuckets"
-rvb = problem.get_replica_vbuckets()
-print rvb
-rvb = problem.get_colored_rvb()
-for a in rvb:
-    print a
+    print "flows"
+    x = problem.get_colored_replication_map()
+    x_agg = util.accumulate(x, util.add_to)
+    for a in x_agg:
+        print a
+
+    print "replica vbuckets"
+    rvb = problem.get_replica_vbuckets()
+    print rvb
+    rvb = problem.get_colored_rvb()
+    for a in rvb:
+        print a

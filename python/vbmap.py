@@ -1,7 +1,9 @@
 import util
 import model
 from multidimarray import MultiDimArray
-from network import Arc, Node, Network
+from network import Arc, Node, Network, Path
+import copy
+import math
 
 
 def get_replica_gen_model():
@@ -357,13 +359,13 @@ class VbMapProblem:
         return self.rvb_with_colors
 
     def prev_avb(self):
-        prev_avb = list(self.previous.break_active_vbuckets_into_colors())
+        prev_avb = copy.deepcopy(self.previous.break_active_vbuckets_into_colors())
         for val in prev_avb:
             util.ensure_has_capacity(val, self.node_count)
         return prev_avb
 
     def prev_rvb(self):
-        prev_rvb = list(self.previous.break_replica_vbuckets_into_colors())
+        prev_rvb = copy.deepcopy(self.previous.break_replica_vbuckets_into_colors())
         for val in prev_rvb:
             util.ensure_has_capacity(val, self.node_count)
         return prev_rvb
@@ -459,6 +461,69 @@ class VbMapProblem:
         return result
 
     def create_network(self, color):
+        if self.replica_count != 1:
+            raise ValueError("can't create network with replica_count != 1")
+        if not self._replica_networks:
+            self.generate_replica_networks()
+        network = Network()
+        prev_avb = self.prev_avb()[color]
+        for i, a in enumerate(prev_avb):
+            if a > 0:
+                n1 = network.find_or_create_node(('prev_avb', i, color))
+                n1.set_source(a)
+                for j in range(self.node_count):
+                    n2 = network.find_or_create_node(('avb', j, color))
+                    a = Arc(n2)
+                    n1.add_arc(a)
+                    a.set_cost(1 if i != j else 0)
+        replica_network = self._replica_networks[0]
+        for i, connections in enumerate(replica_network):
+            for j, connection in enumerate(connections):
+                if connection != 0:
+                    n1 = network.find_node(('avb', i, color))
+                    n2 = network.find_or_create_node(('rvb', j, color))
+                    a = Arc(n2)
+                    a.set_capacity(math.ceil(1024 / (self.node_count * self.slave_factor)))
+                    n1.add_arc(a)
+        prev_rvb = self.prev_rvb()[color]
+        for i, r in enumerate(prev_rvb):
+            if r > 0:
+                n1 = network.find_or_create_node(('prev_rvb', i, color))
+                for j in range(self.node_count):
+                    n2 = network.find_or_create_node(('rvb', j, color))
+                    a = Arc(n1)
+                    n2.add_arc(a)
+                    a.set_cost(1 if i != j else 0)
+                    n1.set_source(-r)
+        return network
+
+    def solve_min_cost_flow(self, color):
+        nw = self.create_network(color)
+        nw.draw(node_compare)
+        source_node = nw.find_node_satisfying(lambda n: n.source > 0)
+        sp = nw.create_shortest_path_tree(source_node)
+        print "sp tree: "
+        nodes = sp.keys()
+        nodes.sort(None, lambda x: sp[x]['dist'])
+        for n in nodes:
+            print n.key, " -> ", sp[n]
+
+        n = nw.find_node(('prev_rvb', 2, 0))
+        parent = sp[n]['parent']
+        path = []
+        while parent is not None:
+            path.append(sp[n]['arc'])
+            n = parent
+            parent = sp[parent]['parent']
+        path.reverse()
+        p = Path(n, path)
+        print "path: ", p
+        cap = p.get_min_value(Arc.capacity)
+        print "cap: ", cap
+        p.consume_flow(cap)
+        nw.draw(node_compare)
+
+    def create_non_zero_flow_network(self, color):
         if not self.is_colored_vbmap_problem():
             raise ValueError("VbMapProblem instance is not a colored map problem")
         network = Network()
@@ -516,7 +581,7 @@ class VbMapProblem:
         return result
 
     def make_plan_for_color(self, color):
-        n = self.create_network(color)
+        n = self.create_non_zero_flow_network(color)
         flows = n.break_into_flows()
         result = []
         for p, f in flows.items():
