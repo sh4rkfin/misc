@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 import unittest
-
 import util
-
 
 class UtilTestCase(unittest.TestCase):
     def test_tuple_len(self):

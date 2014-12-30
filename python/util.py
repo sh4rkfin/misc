@@ -95,3 +95,12 @@ def le(x, y, tol):
 
 def ge(x, y, tol):
     return x >= y or eq(x, y, tol)
+
+
+def minimize(lst, value_getter):
+    result = None
+    for a in lst:
+        value = value_getter(a)
+        if result is None or result > value:
+            result = value
+    return result
