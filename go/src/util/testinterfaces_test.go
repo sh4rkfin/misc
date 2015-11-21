@@ -111,7 +111,6 @@ func TestPanicAndRecover (t *testing.T) {
 func TestInterfaces (t *testing.T) {
 	fmt.Printf("hello, world\n")
 	fmt.Printf("deferTest(): " + strconv.Itoa(deferTest(1)) + "\n")
-
 }
 
 
