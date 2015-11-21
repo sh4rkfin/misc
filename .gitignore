@@ -4,6 +4,7 @@
 *~
 *.iml
 *.pyc
+*.exe
 #*#
 .DS_Store
 .project
