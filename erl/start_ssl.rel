@@ -1,0 +1,7 @@
+{release, {"Erlang/OTP","17"}, {erts, "6.0"},
+ [{kernel,"3.0"},
+  {crypto, "3.3"},
+  {public_key, "0.22"},
+  {asn1, "3.0"}, 
+  {ssl, "5.3.4"},
+  {stdlib,"2.0"}]}.
