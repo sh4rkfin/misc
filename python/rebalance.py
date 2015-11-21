@@ -9,7 +9,6 @@ import os
 import sys
 import vbmap
 import util
-import network
 
 parser = argparse.ArgumentParser(description="Models the rebalance of a Couchbase cluster")
 parser.add_argument("-n", "--node-count", dest="n", type=int, help="number of nodes", required=True)
@@ -18,6 +17,7 @@ parser.add_argument("-s", "--slave-factor", dest="s", type=int, help="slaves fac
 parser.add_argument("-w", "--working", dest="working", type=str, help="working directory", default="./working")
 parser.add_argument("-e", "--existing-solution", dest="existing", action='store_true', help="use existing solution",
                     default=False)
+parser.add_argument("-a", "--solver-algorithm", dest="solver", help="use existing solution", default='glpsol')
 args = parser.parse_args()
 
 
@@ -39,9 +39,10 @@ if use_prev:
 problem = vbmap.VbMapProblem(args.n, args.r, args.s, args.working, prev)
 problem.set_use_existing_solution(args.existing)
 problem.generate_replica_networks()
-problem.solve_min_cost_flow(0)
 
-if False:
+if args.solver == 'custom-min-cost-flow':
+    problem.solve_min_cost_flow()
+else:
     problem.generate_vbmap_with_colors()
     problem.print_result()
 
@@ -54,21 +55,14 @@ if False:
         print p
 
     print "active vbuckets"
-    avb = problem.get_colored_avb()
-    for a in avb:
-        print a
-    avb = problem.get_active_vbuckets()
-    print avb
+    avb = util.accumulate(problem.get_active_vbucket_moves(), util.add_to)
+    print vbmap.twod_array_to_string(array=avb, with_indices=True, delimiter='\t')
 
     print "flows"
     x = problem.get_colored_replication_map()
     x_agg = util.accumulate(x, util.add_to)
-    for a in x_agg:
-        print a
+    print vbmap.twod_array_to_string(x_agg, True, '', '\t')
 
     print "replica vbuckets"
-    rvb = problem.get_replica_vbuckets()
-    print rvb
-    rvb = problem.get_colored_rvb()
-    for a in rvb:
-        print a
+    rvb = util.accumulate(problem.get_replica_vbucket_moves(), util.add_to)
+    print vbmap.twod_array_to_string(rvb, True, '', '\t')

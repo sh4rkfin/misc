@@ -36,7 +36,7 @@ class NetworkTestCase(unittest.TestCase):
     def test_to_node(self):
         n2 = Node(2)
         a = Arc(n2)
-        self.assertTrue(a.to_node == n2)
+        self.assertTrue(a._to_node == n2)
 
 
 if __name__ == '__main__':

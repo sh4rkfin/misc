@@ -1,14 +1,25 @@
 import util
 
 class Arc:
-    def __init__(self, to_node, flow=0):
-        self.to_node = to_node
-        self.flow = flow
+    def __init__(self, to_node, flow=0, base_arc=None):
+        self._to_node = to_node
+        self._flow = flow
+        self._alternative_color_flow = 0
         self._cost = 0
         self._capacity = float("inf")
+        self._base_arc = base_arc
 
-    def get_flow(self):
-        return self.flow
+    def is_residual(self):
+        return self._base_arc is not None
+
+    def total_flow(self):
+        return self._flow + self._alternative_color_flow
+
+    def to_node(self):
+        return self._to_node
+
+    def calculate_cost(self):
+        return self._flow * self._cost
 
     def set_cost(self, cost):
         self._cost = cost
@@ -19,11 +30,36 @@ class Arc:
     def cost(self):
         return self._cost
 
+    def alternative_color_flow(self):
+        return self._alternative_color_flow
+
+    def set_alternative_color_flow(self, value):
+        self._alternative_color_flow = value
+
     def capacity(self):
         return self._capacity
 
+    def residual_capacity(self):
+        return self._capacity - self._flow - self._alternative_color_flow
+
+    def adjust_capacity(self, value):
+        self._capacity += value
+
+    def change_flow(self, value):
+        self._flow += value
+
+    def augment_flow(self, flow):
+        self._flow += flow
+
+    def has_residual_capacity(self):
+        return self.residual_capacity() > 0
+
+    def is_residual_arc_for(self, base_arc):
+        return self._base_arc == base_arc
+
     def __repr__(self):
-        return "->{0}".format(self.to_node.key)
+        return "->{0}".format(self._to_node.key)
+
 
 class Node:
     def __init__(self, key, source=0, arcs=None):
@@ -37,7 +73,7 @@ class Node:
     def add_arc(self, arc):
         self.arcs.append(arc)
         if self.network:
-            self.network.add_node(arc.to_node)
+            self.network.add_node(arc.to_node())
 
     def has_arc(self, arc):
         return arc in self.arcs
@@ -49,9 +85,34 @@ class Node:
         self.source += value
 
     def __str__(self):
-        result = '{0} {1} -> '.format(self.key, self.source)
+        return self.to_string()
+
+    def calculate_cost(self):
+        result = 0
         for a in self.arcs:
-            result += "{0}f={1},c={2},u={3} ".format(str(a.to_node.key), a.flow, a.cost(), a.capacity())
+            result += a.calculate_cost()
+        return result
+
+    @staticmethod
+    def key_to_string(key):
+        return str(key)
+
+    def to_string(self, key_stringer=None, arcs_on_separate_lines=False):
+        if key_stringer is None:
+            key_stringer = Node.key_to_string
+        result = '{0} {1} -> '.format(key_stringer(self.key), self.source)
+        count = len(self.arcs)
+        if arcs_on_separate_lines and count > 0:
+            result += "\n     -> "
+        for i, a in enumerate(self.arcs):
+            result += "{0},f={1},c={2}".format(key_stringer(a.to_node().key), a.total_flow(), a.cost())
+            if a.capacity() != float('inf'):
+                result += ",u={0} ".format(a.capacity())
+            else:
+                result += " "
+            if arcs_on_separate_lines and i < count - 1:
+                result += "\n"
+                result += "     -> "
         return result
 
     def __repr__(self):
@@ -62,7 +123,7 @@ class Node:
 
     def get_arc(self, to_node):
         for a in self.arcs:
-            if a.to_node == to_node:
+            if a.to_node() == to_node:
                 return a
         return None
 
@@ -73,7 +134,12 @@ class Node:
         if self not in collector:
             collector[self] = self
             for a in self.arcs:
-                a.to_node.gather_nodes(collector)
+                a.to_node().gather_nodes(collector)
+
+    def find_residual_arc(self, base_arc):
+        for a in self.arcs:
+            if a.is_residual_arc_for(base_arc):
+                return a
 
     @staticmethod
     def compare(n1, n2):
@@ -96,7 +162,7 @@ class Path:
 
     def to_node(self):
         l = len(self._arcs)
-        return self._node if l == 0 else self._arcs[l - 1].to_node
+        return self._node if l == 0 else self._arcs[l - 1].to_node()
 
     def add_arc(self, arc):
         if not self.to_node().has_arc(arc):
@@ -107,7 +173,7 @@ class Path:
     def nodes(self):
         result = [self._node]
         for a in self._arcs:
-            result.append(a.to_node)
+            result.append(a.to_node())
         return result
 
     def __getitem__(self, idx):
@@ -116,8 +182,15 @@ class Path:
     def get_min_value(self, value_getter):
         return util.minimize(self._arcs, value_getter)
 
+    def find_max_augmenting_flow(self):
+        result = self.get_min_value(Arc.residual_capacity)
+        result = min(result, self._node.source)
+        result = min(result, -self.to_node().source)
+        result = max(result, 0)
+        return result
+
     def get_min_flow(self):
-        return self.get_min_value(Arc.get_flow)
+        return self.get_min_value(Arc.total_flow)
 
     def __len__(self):
         return len(self._arcs)
@@ -132,16 +205,34 @@ class Path:
         if len(self) == 0:
             return
         for a in self._arcs:
-            a.flow += value
+            a.change_flow(value)
         if not self.is_cycle():
             self._node.change_source_flow(value)
             self.to_node().change_source_flow(-value)
 
+    def sum_costs(self):
+        result = 0
+        for a in self._arcs:
+            result += a.cost()
+        return result
+
     def consume_flow(self, value):
         if len(self) == 0:
             return
+        from_node = self._node
         for a in self._arcs:
-            a.flow += value
+            # augment the flow and reduce the residual capacity
+            a.augment_flow(value)
+            # create / increase the residual back arc
+            residual_arc = a.to_node().find_residual_arc(a)
+            if residual_arc is None:
+                residual_arc = Arc(from_node, 0, a)
+                residual_arc.set_capacity(0)
+                a.to_node().add_arc(residual_arc)
+            residual_arc.adjust_capacity(value)
+            # update the from_node
+            from_node = a.to_node()
+
         if not self.is_cycle():
             self._node.change_source_flow(-value)
             self.to_node().change_source_flow(+value)
@@ -185,6 +276,19 @@ class Network:
             if predicate(n):
                 return n
 
+    def find_nodes_satisfying(self, predicate):
+        result = []
+        for n in self.node_map.values():
+            if predicate(n):
+                result.append(n)
+        return result
+
+    def calculate_cost(self):
+        result = 0
+        for n in self.node_map.values():
+            result += n.calculate_cost()
+        return result
+
     def find_or_create_node(self, key):
         node = self.node_map.get(key)
         if node is None:
@@ -192,12 +296,12 @@ class Network:
             self.add_node(node)
         return node
 
-    def draw(self, comparator=None):
+    def draw(self, comparator=None, key_stringer=None, arcs_on_separate_lines=False):
         node_map = self.get_node_map()
         nodes = node_map.values()
         nodes.sort(comparator)
         for n in nodes:
-            print str(n)
+            print n.to_string(key_stringer, arcs_on_separate_lines)
 
     def get_max_source_node(self):
         max_source, max_node = 0, None
@@ -222,7 +326,8 @@ class Network:
             result[path] = min_flow
         return result
 
-    def create_shortest_path_tree(self, source_node):
+    @staticmethod
+    def create_shortest_path_tree(source_node):
         """
         Creates and returns a shortest path tree rooted at source_node. Should be Bellman-Ford.
         :param source_node: root of the shortest path tree
@@ -234,7 +339,9 @@ class Network:
         while True:
             current_dist = memo[current]['dist']
             for a in current.arcs:
-                node = a.to_node
+                if not a.has_residual_capacity():
+                    continue
+                node = a.to_node()
                 node_memo = memo.get(node)
                 if node_memo is None:
                     memo[node] = {'state': 'unvisited', 'dist': float('inf')}
@@ -249,25 +356,24 @@ class Network:
                         node_memo['parent'] = current
                         node_memo['arc'] = a
             min_dist, arg_min = None, None
+            memo[current]['state'] = 'visited'
             for n, m in memo.items():
                 if m['state'] == 'unvisited':
                     if min_dist is None or min_dist > m['dist']:
                         min_dist = m['dist']
                         arg_min = n
-            memo[current]['state'] = 'visited'
             if min_dist is None:
                 break
             current = arg_min
         return memo
 
-
     @staticmethod
     def resolve_flow(node, memo, tol=1e-3):
         if util.ge(node.source, 0, tol):
             # not a a sink node, keep looking
-            arc = node.get_max_arc(Arc.get_flow)
-            memo[arc.to_node] = {'parent': node, 'arc': arc}
-            return Network.resolve_flow(arc.to_node, memo)
+            arc = node.get_max_arc(Arc.total_flow)
+            memo[arc.to_node()] = {'parent': node, 'arc': arc}
+            return Network.resolve_flow(arc.to_node(), memo)
 
         # we are at a sink node, compute the path
         current, path = node, []
@@ -279,9 +385,3 @@ class Network:
             parent = memo[current]['parent']
         path.reverse()
         return Path(current, path)
-
-
-
-
-
-

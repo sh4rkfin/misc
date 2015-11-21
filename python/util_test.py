@@ -101,7 +101,7 @@ class UtilTestCase(unittest.TestCase):
         self.assertEqual(util.dimension_count([]), 1)
         self.assertEqual(util.dimension_count([[]]), 2)
         self.assertEqual(util.dimension_count([[[]]]), 3)
-
+`
     def test_arg_max(self):
         t1 = ('one', 1)
         t2 = ('two', 2)
@@ -122,6 +122,14 @@ class UtilTestCase(unittest.TestCase):
         self.assertTrue(util.eq(val, 0, tol))
         self.assertTrue(util.le(val, 0, tol))
         self.assertFalse(util.lt(val, 0, tol))
+
+    def test_inf(self):
+        inf = float('inf')
+        inf2 = float('inf')
+        self.assertEqual(inf, inf2)
+        self.assertEqual(inf - 10, inf)
+        self.assertEqual(inf + 10, inf)
+        self.assertGreater(inf, 1e20)
 
 if __name__ == '__main__':
     unittest.main()

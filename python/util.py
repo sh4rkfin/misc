@@ -81,6 +81,14 @@ def arg_max(lst, key):
     return result
 
 
+def arg_min(lst, key):
+    min_val, result = None, None
+    for a in lst:
+        if min_val is None or min_val > key(a):
+            min_val, result = key(a), a
+    return result
+
+
 def eq(x, y, tol):
     return abs(x - y) < tol
 
