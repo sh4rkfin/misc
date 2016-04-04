@@ -13,9 +13,13 @@ to buy a gift for.
 Note: currently you need an Gmail address to run this script and
 additionally you will need to configure your Gmail account to allow
 'low security' apps to connect to it and use it as an SMTP server.
-Don't worry: this doesn't mean your Gmail password will be sent in
+Once you're logged in to the appropriate GMail account, you can do
+this from the https://www.google.com/settings/security/lesssecureapps
+page.
+
+Don't worry: this all doesn't mean your Gmail password will be sent in
 the clear. The script sets up a TLS connection to the server and
-login and the email themselves are encrypted. The 'low security apps'
+login and the email themselves are encrypted and the 'low security apps'
 setting can be reverted after you send the e-mails. """)
 parser.add_argument("-f", "--people-file", dest="people_file", required=True, help="""\
 File describing the Kris Kindle participants. The format of the file
