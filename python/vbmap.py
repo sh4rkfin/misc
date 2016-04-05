@@ -7,6 +7,14 @@ import math
 
 
 def get_replica_gen_model():
+    """
+    Returns a ModelInstance (a glpsolvable structure in GMPL format) for the
+    problem of identifying the "replica networks" associated with a given data
+    partitioning problem. A replica network for the i-th replica is the set of arcs
+    that may have i-th replica flow.
+
+    :return: a model instance for the replica networks generator model
+    """
     model_file_name = "models/replica-map-gen-with-prev.mod"
     data_string = "data;\n" \
                   "param n := $n;\n" \
@@ -16,9 +24,9 @@ def get_replica_gen_model():
                   "param prev :=\n" \
                   "$prev_connections;\n" \
                   "end;\n"
-    data_file_name_template = "cluster-n$n-r$r-replicagen.data"
     result_file_name_template = "result-n$n-r$r-replicagen.txt"
     m = model.Model(model_file_name, data_string)
+    data_file_name_template = "cluster-n$n-r$r-replicagen.data"
     return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
 
 
@@ -117,6 +125,17 @@ def build_replica_networks(node_count,
                            previous=None,
                            working_dir='.',
                            use_existing_solution=False):
+    """
+    Returns a 3-d structure (map of map of maps) describing the replica networks for
+    a cluster of node_count size with replica_count replicas.
+    :param node_count: the number of nodes
+    :param replica_count: the number of replicas
+    :param slave_factor: the max slaves of each node
+    :param previous: the previous replica connections
+    :param working_dir: the working directory
+    :param use_existing_solution: whether to use an existing solution if found
+    :return:
+    """
     if working_dir is None:
         working_dir = '.'
     if previous is None:
@@ -271,6 +290,10 @@ class VbMapProblem:
         self._use_exising_solution = value
 
     def generate_replica_networks(self):
+        """
+        Generates the "replica networks" for
+        :return:
+        """
         actuals = None
         if self.previous:
             self.previous.generate_vbmap()

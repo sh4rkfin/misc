@@ -8,11 +8,12 @@ SOLVER = "/Users/dfinlay/eclipse-projects/glpk-4.35/examples/glpsol"
 
 def invoke_solver(model_file_name, data_file_name, result_file_name, options=None):
     """
-    Invokes the GLPK solver against the specified model and data using
-    the specified options.
+    Invokes the GLPK solver (glpsol) against the GNU MathProg / GMPL model and data
+    in the files identifed by model_file_name and data_file_name using the specified
+    options.
 
     Args:
-        model_file_name: file containing model in GLPK format
+        model_file_name: file containing model in GNU MathProg / GMPL model
         data_file_name: file containing data to feed model
         result_file_name: file to output results to
         options: list of extra options to pass on the command line to the solver
@@ -181,6 +182,15 @@ def as_template(s):
 
 
 class Model:
+    """
+    Represents an abstract problem that is solvable by the GLPK solver.
+    Parameters need to be provided to the model in order for it to be solvable.
+    This is usually done by creating a ModelInstance.
+
+    Attributes:
+        model_name: name of file that contains the model in GLPK format
+        data_file_template: string.Template specifying the content of the data file.
+    """
     def __init__(self, model_name, data_file_template):
         self.model_name = model_name
         self.data_file_template = as_template(data_file_template)
@@ -196,6 +206,16 @@ class Model:
 
 
 class ModelInstance:
+    """
+    Represents a solvable problem by glpsol in GMPL format.
+
+    Attributes:
+        model: the model
+        params: the parameters to the model (and to the data_file_template)
+        data_file_name_template: string.Template used to generate the data file name
+        result_file_name_template: string.Template used to generated the result file name
+        working_dir: the working directory (against which file names will be resolved)
+    """
     def __init__(self, model, params, data_file_name_template, result_file_name_template, working_dir):
         self.model = model
         self.params = params
