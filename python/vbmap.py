@@ -291,7 +291,7 @@ class VbMapProblem:
 
     def generate_replica_networks(self):
         """
-        Generates the "replica networks" for
+        Generates the "replica networks" for this.
         :return:
         """
         actuals = None
