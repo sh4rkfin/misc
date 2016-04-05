@@ -36,6 +36,7 @@ if use_prev:
     prev.generate_replica_networks()
     prev.generate_vbmap()
     prev.print_result()
+
 problem = vbmap.VbMapProblem(args.n, args.r, args.s, args.working, prev)
 problem.set_use_existing_solution(args.existing)
 problem.generate_replica_networks()

@@ -317,7 +317,7 @@ class VbMapProblem:
         vbuckets in this problem.
         E.g. if the solution the problem has the active vbuckets as
                 [ 3, 0, 5 ]
-        this methiod would return 2 arrays of:
+        this method would return 2 arrays of:
                 [ 3, 0, 0 ]
                 [ 0, 0, 5 ]
         where the first array represents the active vbuckets of color 0
