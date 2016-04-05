@@ -143,6 +143,21 @@ def read_variable(filename, var_name):
 
 
 def read_2d_variable_as_map(filename, var_name):
+    """
+    Reads variables from the solution file of a GLPK-solved problem in the
+    following form:
+
+    No.    Column name  St   Activity     Lower bound   Upper bound    Marginal
+    ------ ------------ -- ------------- ------------- ------------- -------------
+         1 avb[0,0]     B            103             0
+         2 avb[0,1]     B              0             0
+
+    The variable must be precisely 2-d.
+
+    :param filename: name of the file containing the GLPK solution
+    :param var_name: name of the variable to be read
+    :return: a dictionary of dictionaries containing the value of the 2-d variable
+    """
     result = {}
     regex = "{0}\[(\d+),(\d+)\]\s*(\*)?\s*(\d+(\.\d+)?)".format(var_name)
 
