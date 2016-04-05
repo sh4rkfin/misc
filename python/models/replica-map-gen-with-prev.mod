@@ -1,9 +1,10 @@
 /*
  Replica network generation with supplied previous state.
 
- TODO: better commented
+ TODO: comment this better
 
- Try this file with ./data/9-node.data
+ Try this model out as follows:
+   glpsol -m models/replica-map-gen-with-prev.mod -d data/9-node.data
  
 */
 
@@ -15,10 +16,9 @@ param s, integer, > 0;  /* slave machine factor */
 
 param pretty, binary;   /* whether to pretty print or not */
 
-set N := 0..(n-1);          /* set of nodes */
+set N := 0..(n-1);      /* set of nodes */
 
-set R := 0..(r-1);
-        /* replicas */
+set R := 0..(r-1);      /* replicas */
 
 var x{i in N, j in N, k in R}, binary;
         /* x[i,j,k] = 1 if replica traffic may flow from node i to node j

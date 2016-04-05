@@ -1,9 +1,10 @@
 /*
  Replica network generation.
 
- TODO: better commented
+ TODO: comment this better
 
- Try this file with ./data/9-node.data
+ Try this model out as follows:
+    glpsol -m models/replica-map-gen.mod -d data/9-node.data
  
 */
 
