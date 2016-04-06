@@ -486,6 +486,53 @@ class VbMapProblem:
         return result
 
     def create_network(self, color, current_flow=None):
+        """
+        Creates a partition rebalance network for flows of a given color.
+
+        The network looks like this:
+
+
+        +-+
+        |1|                                         prev_avb
+        +++_____________________________
+         |               |              \                 za
+         v               v              v
+        +-+             +-+            +-+
+        |1|             |2|            |3|               avb
+        +-+             +-+            +-+
+                 x               x
+        +-+             +-+            +-+
+        |1|             |2|            |3|               rvb
+        +-+             +-+            +-+
+         |       x       |       x      |                 zr
+         v               v              v
+        +-+             +-+            +-+
+        |1|             |2|            |3|          prev_rvb
+        +-+             +-+            +-+
+
+        prev_avb[i]: is the previous (or existing) active vbuckets of this color on node i
+        avb[i]: will be the active vbuckets of this color on node i after the move
+        rvb[i]: replica vbuckets of this color on node i
+        prev_rvb[i]: the previous replica vbuckets of this color on node i
+        za[i,j]: the number of active vbuckets of this color that move from node i to node j
+                    as part of the solution
+        zr[i,]: the number of replica vbuckets of this color that move from node i to node j
+
+        prev_avb and prev_rvb are known and we're solving for avb, rvb, za and zr.
+
+        No self-replication is captured by the fact that there are no links between nodes
+        avb[i] and rvb[i].
+
+        Costs of the za arcs are: za[i,j] = /  0    if i == j
+                                            \  1    otherwise
+
+        And similarly for the zr arcs. This captures the idea that we charge 1 to move one
+        active vbucket to another node and 0 to leave it where it is.
+
+        :param color:
+        :param current_flow:
+        :return:
+        """
         if current_flow is not None:
             for x in current_flow:
                 print x
@@ -494,6 +541,7 @@ class VbMapProblem:
         if not self._replica_networks:
             self.generate_replica_networks()
         network = Network()
+        network.set_default_node_comparator(node_compare)
         prev_avb = self.prev_avb()[color]
         for i, a in enumerate(prev_avb):
             if a > 0:
@@ -529,10 +577,6 @@ class VbMapProblem:
         return network
 
     @staticmethod
-    def no_color_key_stringer(key):
-        return "{0}:{1}".format(key[0], key[1])
-
-    @staticmethod
     def augment_single_flow(network, source_node, cost_threshold=None):
         sp = network.create_shortest_path_tree(source_node)
         ns = network.find_nodes_satisfying(lambda x: sp.get(x) is not None and x.source < 0)
@@ -553,9 +597,8 @@ class VbMapProblem:
 
     @staticmethod
     def augment_flows(network, cost_threshold=None):
-        network.draw(comparator=node_compare,
-                     key_stringer=VbMapProblem.no_color_key_stringer,
-                     arcs_on_separate_lines=True)
+        print "Network before augmentation"
+        network.draw(arcs_on_separate_lines=True)
         flows = []
         result = 'feasible'
         while True:
@@ -574,9 +617,8 @@ class VbMapProblem:
                 break
             flows.append((path, flow))
 
-        network.draw(comparator=node_compare,
-                     key_stringer=VbMapProblem.no_color_key_stringer,
-                     arcs_on_separate_lines=True)
+        print "Network after augmentation"
+        network.draw(arcs_on_separate_lines=True)
         for p, f in flows:
             print f, ": ", p
         print "total cost: ", network.calculate_cost()
@@ -587,9 +629,7 @@ class VbMapProblem:
 
     def solve_min_cost_flow_for_color(self, color, current_flow=None, cost_threshold=None):
         nw = self.create_network(color, current_flow)
-        nw.draw(comparator=node_compare,
-                key_stringer=VbMapProblem.no_color_key_stringer,
-                arcs_on_separate_lines=True)
+        nw.draw(arcs_on_separate_lines=True)
         augmentation = VbMapProblem.augment_flows(nw, cost_threshold)
         print "total cost: ", nw.calculate_cost()
         return {

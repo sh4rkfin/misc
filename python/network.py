@@ -95,6 +95,8 @@ class Node:
 
     @staticmethod
     def key_to_string(key):
+        if isinstance(key, tuple):
+            return ':'.join([str(k) for k in list(key)])
         return str(key)
 
     def to_string(self, key_stringer=None, arcs_on_separate_lines=False):
@@ -241,15 +243,19 @@ class Path:
 class Network:
 
     def __init__(self, nodes=None):
-        self.node_map = {}
-        self.tol = 1e-3
+        self._node_map = {}
+        self._tol = 1e-3
+        self._default_node_comparator = None
         if nodes is not None:
             for n in nodes:
                 self.add_node(n)
 
+    def set_default_node_comparator(self, default_node_comparator):
+        self._default_node_comparator = default_node_comparator
+
     def add_node(self, node):
         # print "*** try add node: ", hex(id(node)), node,
-        found = self.node_map.get(node.key)
+        found = self._node_map.get(node.key)
         if found is not None:
             if found == node:
                 # print "... node exists: "
@@ -261,36 +267,36 @@ class Network:
         nodes = {}
         node.gather_nodes(nodes)
         for n in nodes:
-            if n.key not in self.node_map:
-                self.node_map[n.key] = n
+            if n.key not in self._node_map:
+                self._node_map[n.key] = n
                 n.set_network(self)
 
     def get_node_map(self):
-        return self.node_map
+        return self._node_map
 
     def find_node(self, key):
-        return self.node_map.get(key)
+        return self._node_map.get(key)
 
     def find_node_satisfying(self, predicate):
-        for n in self.node_map.values():
+        for n in self._node_map.values():
             if predicate(n):
                 return n
 
     def find_nodes_satisfying(self, predicate):
         result = []
-        for n in self.node_map.values():
+        for n in self._node_map.values():
             if predicate(n):
                 result.append(n)
         return result
 
     def calculate_cost(self):
         result = 0
-        for n in self.node_map.values():
+        for n in self._node_map.values():
             result += n.calculate_cost()
         return result
 
     def find_or_create_node(self, key):
-        node = self.node_map.get(key)
+        node = self._node_map.get(key)
         if node is None:
             node = Node(key)
             self.add_node(node)
@@ -299,13 +305,15 @@ class Network:
     def draw(self, comparator=None, key_stringer=None, arcs_on_separate_lines=False):
         node_map = self.get_node_map()
         nodes = node_map.values()
+        if comparator is None:
+            comparator = self._default_node_comparator
         nodes.sort(comparator)
         for n in nodes:
             print n.to_string(key_stringer, arcs_on_separate_lines)
 
     def get_max_source_node(self):
         max_source, max_node = 0, None
-        for n in self.node_map.values():
+        for n in self._node_map.values():
             if n.source > max_source or max_node is None:
                 max_node = n
                 max_source = n.source
@@ -316,7 +324,7 @@ class Network:
         while True:
             # find max source
             max_node = self.get_max_source_node()
-            if util.le(max_node.source, 0, self.tol):
+            if util.le(max_node.source, 0, self._tol):
                 # no more source nodes, return
                 break
             memo = {max_node: {'parent': None}}
