@@ -101,7 +101,7 @@ class UtilTestCase(unittest.TestCase):
         self.assertEqual(util.dimension_count([]), 1)
         self.assertEqual(util.dimension_count([[]]), 2)
         self.assertEqual(util.dimension_count([[[]]]), 3)
-`
+
     def test_arg_max(self):
         t1 = ('one', 1)
         t2 = ('two', 2)
@@ -111,6 +111,10 @@ class UtilTestCase(unittest.TestCase):
         arg_max = util.arg_max(ts, lambda x: x[0])
         print "arg max:", arg_max
         self.assertEqual(arg_max, t2)
+        self.assertEqual(util.arg_max(ts, lambda x: x[1]), t4)
+        t = {'a': 1, 'b': 2, 'c': 3, 'd': 1}
+        arg_max = util.arg_max(t.viewitems(), lambda x: x[1])
+        self.assertEqual(arg_max[0], 'c')
 
     def test_tol_methods(self):
         tol = 1e-3

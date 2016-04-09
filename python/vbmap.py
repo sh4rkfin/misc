@@ -113,9 +113,10 @@ def node_compare(n1, n2):
     :return:
     """
     rank = {'prev_avb': 0, 'avb': 1, 'rvb': 2, 'prev_rvb': 3}
-    r1, r2 = rank[n1.key[0]], rank[n2.key[0]]
+    n1_key, n2_key = n1.key(), n2.key()
+    r1, r2 = rank[n1_key[0]], rank[n2_key[0]]
     if r1 == r2:
-        return -1 if n1.key < n2.key else 1 if n1.key > n2.key else 0
+        return -1 if n1_key < n2_key else 1 if n1_key > n2_key else 0
     return r1 - r2
 
 
@@ -485,7 +486,7 @@ class VbMapProblem:
             result = util.sum_off_diagonal(moves)
         return result
 
-    def create_network(self, color, current_flow=None):
+    def create_network(self, color):
         """
         Creates a partition rebalance network for flows of a given color.
 
@@ -533,22 +534,23 @@ class VbMapProblem:
         :param current_flow:
         :return:
         """
-        if current_flow is not None:
-            for x in current_flow:
-                print x
         if self.replica_count != 1:
             raise ValueError("can't create network with replica_count != 1")
         if not self._replica_networks:
             self.generate_replica_networks()
         network = Network()
         network.set_default_node_comparator(node_compare)
+        self.add_to_network(color, network)
+        return network
+
+    def add_to_network(self, color, network):
         prev_avb = self.prev_avb()[color]
         for i, a in enumerate(prev_avb):
             if a > 0:
                 n1 = network.find_or_create_node(('prev_avb', i, color))
-                n1.set_source(a)
+                n1.set_source(a, color)
                 for j in range(self.node_count):
-                    n2 = network.find_or_create_node(('avb', j, color))
+                    n2 = network.find_or_create_node(('avb', j))
                     a = Arc(n2)
                     n1.add_arc(a)
                     a.set_cost(1 if i != j else 0)
@@ -556,66 +558,52 @@ class VbMapProblem:
         for i, connections in enumerate(replica_network):
             for j, connection in enumerate(connections):
                 if connection != 0:
-                    n1 = network.find_node(('avb', i, color))
-                    n2 = network.find_or_create_node(('rvb', j, color))
-                    a = Arc(n2)
-                    capacity = math.ceil(1024.0 / (self.node_count * self.slave_factor))
-                    print "cap: ", capacity
-                    capacity -= current_flow[i][j] if current_flow is not None else 0
-                    a.set_capacity(capacity)
-                    n1.add_arc(a)
+                    n1 = network.find_or_create_node(('avb', i))
+                    n2 = network.find_or_create_node(('rvb', j))
+                    a = n1.get_arc(n2)
+                    if not a:
+                        a = Arc(n2)
+                        n1.add_arc(a)
+                        capacity = math.ceil(1024.0 / (self.node_count * self.slave_factor))
+                        print "cap: ", capacity
+                        a.set_capacity(capacity)
         prev_rvb = self.prev_rvb()[color]
         for i, r in enumerate(prev_rvb):
             if r > 0:
                 n1 = network.find_or_create_node(('prev_rvb', i, color))
                 for j in range(self.node_count):
-                    n2 = network.find_or_create_node(('rvb', j, color))
+                    n2 = network.find_or_create_node(('rvb', j))
                     a = Arc(n1)
                     n2.add_arc(a)
                     a.set_cost(1 if i != j else 0)
-                    n1.set_source(-r)
-        return network
+                    n1.set_source(-r, color)
 
     @staticmethod
-    def augment_single_flow(network, source_node, cost_threshold=None):
-        sp = network.create_shortest_path_tree(source_node)
-        ns = network.find_nodes_satisfying(lambda x: sp.get(x) is not None and x.source < 0)
-        dest_node = util.arg_min(ns, lambda x: sp[x]['dist'])
-        if cost_threshold is None or sp[dest_node]['dist'] <= cost_threshold:
-            parent = sp[dest_node]['parent']
-            path = []
-            while parent is not None:
-                path.append(sp[dest_node]['arc'])
-                dest_node = parent
-                parent = sp[parent]['parent']
-            path.reverse()
-            p = Path(dest_node, path)
-            cap = p.find_max_augmenting_flow()
-            p.consume_flow(cap)
-            return p, cap
-        return None, 0
-
-    @staticmethod
-    def augment_flows(network, cost_threshold=None):
+    def push_toward_feasibility(network, cost_threshold=None):
         print "Network before augmentation"
         network.draw(arcs_on_separate_lines=True)
         flows = []
         result = 'feasible'
         while True:
-            source_node = network.find_node_satisfying(lambda x: x.source > 0)
-            ns = network.find_nodes_satisfying(lambda x: x.source < 0)
+            source_node = network.find_node_satisfying(lambda x: x.total_source() > 0)
             if source_node is None:
-                if len(ns) == 0:
-                    result = 'optimal'
+                ns = network.find_nodes_satisfying(lambda x: x.total_source() < 0)
+                result = 'infeasible' if ns else 'feasible'
                 break
-            elif len(ns) == 0:
-                # infeasible
-                result = 'infeasible'
+            colors = network.get_non_zero_source_colors()
+            path_found = False
+            for color in colors:
+                source_node = network.find_node_satisfying(lambda x: x.source(color) > 0)
+                ns = network.find_nodes_satisfying(lambda x: x.source(color) < 0)
+                if not ns:
+                    result = 'infeasible'
+                    break
+                path, flow = network.push_min_cost_flow(source_node, color, cost_threshold)
+                if path:
+                    path_found = True
+                    flows.append((path, flow))
+            if not path_found:
                 break
-            path, flow = VbMapProblem.augment_single_flow(network, source_node, cost_threshold)
-            if path is None:
-                break
-            flows.append((path, flow))
 
         print "Network after augmentation"
         network.draw(arcs_on_separate_lines=True)
@@ -627,73 +615,48 @@ class VbMapProblem:
             'flows': flows,
         }
 
-    def solve_min_cost_flow_for_color(self, color, current_flow=None, cost_threshold=None):
-        nw = self.create_network(color, current_flow)
-        nw.draw(arcs_on_separate_lines=True)
-        augmentation = VbMapProblem.augment_flows(nw, cost_threshold)
-        print "total cost: ", nw.calculate_cost()
-        return {
-            'result': augmentation['result'],
-            'flows': augmentation['flows'],
-            'network': nw,
-        }
+    @staticmethod
+    def augment_flows(network):
+        solution = {'flows': []}
+        for threshold in [0, 1, 2, None]:
+            result = VbMapProblem.push_toward_feasibility(network, threshold)
+            print "total cost: ", network.calculate_cost()
+            solution['result'] = result['result']
+            solution['flows'] += result['flows']
+        return solution
 
     def solve_min_cost_flow(self):
         if not self._replica_networks:
             self.generate_replica_networks()
         self.previous.break_active_vbuckets_into_colors()
-        solutions = []
-        networks = [self.create_network(c) for c in range(self.previous.color_count)]
-        for th in range(3):
-            for color in range(self.previous.color_count):
-                network = networks[color]
-                x = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
-                for s in solutions:
-                    for p, f in s['flows']:
-                        if p.from_node().key[2] != color:
-                            x[p[0].to_node().key[1]][p[1].to_node().key[1]] += f
-                for i, a in enumerate(x):
-                    for j, val in enumerate(a):
-                        if val > 0:
-                            from_node = network.find_node(('avb', i, color))
-                            to_node = network.find_node(('rvb', j, color))
-                            arc = from_node.get_arc(to_node)
-                            arc.set_alternative_color_flow(x[i][j])
-
-                print "solving color {0} with threshold {1}".format(color, th)
-                augmentation = VbMapProblem.augment_flows(network, th)
-                print "total cost: ", network.calculate_cost()
-                solutions.append({
-                    'result': augmentation['result'],
-                    'flows': augmentation['flows'],
-                    'network': network,
-                    })
+        network = None
+        for c in range(self.previous.color_count):
+            if network is None:
+                network = self.create_network(c)
+            else:
+                self.add_to_network(c, network)
+        solution = VbMapProblem.augment_flows(network)
         za = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
         zr = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
         x = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
-        total_cost = 0
-        for nw in networks:
-            cost = nw.calculate_cost()
-            total_cost += cost
-        for i, s in enumerate(solutions):
-            for p, f in s['flows']:
-                from_node = p.from_node().key[1]
-                to_node = p[0].to_node().key[1]
-                za[from_node][to_node] += f
-                from_node = p[0].to_node().key[1]
-                to_node = p[1].to_node().key[1]
-                x[from_node][to_node] += f
-                from_node = p[1].to_node().key[1]
-                to_node = p[2].to_node().key[1]
-                zr[from_node][to_node] += f
-            print "solution:", i, " result:", s['result']
+        total_cost = network.calculate_cost()
+        for p, f in solution['flows']:
+            from_node = p.from_node().key()[1]
+            to_node = p[0].to_node().key()[1]
+            za[from_node][to_node] += f
+            from_node = p[0].to_node().key()[1]
+            to_node = p[1].to_node().key()[1]
+            x[from_node][to_node] += f
+            from_node = p[1].to_node().key()[1]
+            to_node = p[2].to_node().key()[1]
+            zr[from_node][to_node] += f
+        print "solution result:", solution['result']
         print "total cost:", total_cost
         print twod_array_to_string(array=za, with_indices=True, delimiter='\t')
         print twod_array_to_string(array=x, with_indices=True, delimiter='\t')
         print twod_array_to_string(array=zr, with_indices=True, delimiter='\t')
-        for s in solutions:
-            for p, f in s['flows']:
-                print p.sum_costs(), ",", f, ": ", p
+        for p, f in solution['flows']:
+            print p.sum_costs(), ",", f, ": ", p
         
 
     def create_non_zero_flow_network(self, color):

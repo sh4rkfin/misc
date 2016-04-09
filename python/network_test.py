@@ -36,8 +36,18 @@ class NetworkTestCase(unittest.TestCase):
     def test_to_node(self):
         n2 = Node(2)
         a = Arc(n2)
-        self.assertTrue(a._to_node == n2)
+        self.assertTrue(a.to_node() == n2)
 
+    def test_flow(self):
+        n2 = Node(1)
+        a = Arc(n2)
+        self.assertTrue(a.total_flow() == 0)
+        self.assertTrue(a.flow() == 0)
+        a.set_flow(3)
+        self.assertTrue(a.flow() == 3)
+        a.set_flow(3, 'red')
+        self.assertTrue(a.flow('red') == 3)
+        self.assertEqual(a.total_flow(), 6)
 
 if __name__ == '__main__':
     unittest.main()
