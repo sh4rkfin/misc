@@ -177,20 +177,39 @@ def build_replica_networks(node_count,
     return rep
 
 
-def twod_array_to_string(array, with_indices=False, end_of_index_line="", delimiter=' '):
+def twod_array_to_string(array, with_indices=False, end_of_index_line="", delimiter=' ', total=False):
     result = ""
-    size = len(array)
+    row_count = len(array)
+    if not row_count:
+        return result
+    col_count = len(array[0])
     result += delimiter
     if with_indices:
-        for i in range(len(array[0])):
+        for i in range(col_count):
             result += "{0}{1}".format(i, delimiter)
+        if total:
+            result += "total"
         result += " {0}\n".format(end_of_index_line)
-    for i in range(size):
+    for i in range(row_count):
         if with_indices:
             result += " {0} ".format(i)
         result += delimiter
+        if total:
+            row_total = 0
         for val in array[i]:
             result += "{0}{1}".format(val, delimiter)
+            if total:
+                row_total += val
+        if total:
+            result += "{0}".format(row_total)
+        result += '\n'
+    if total:
+        result += " total{0}".format(delimiter)
+        for j in range(col_count):
+            col_total = 0
+            for i in range(row_count):
+                col_total += array[i][j]
+            result += "{0}{1}".format(col_total, delimiter)
         result += '\n'
     return result
 
@@ -655,9 +674,9 @@ class VbMapProblem:
             zr[from_node][to_node] += f
         print "solution result:", solution['result']
         print "total cost:", total_cost
-        print twod_array_to_string(array=za, with_indices=True, delimiter='\t')
+        print twod_array_to_string(array=za, with_indices=True, delimiter='\t', total=True)
         print twod_array_to_string(array=x, with_indices=True, delimiter='\t')
-        print twod_array_to_string(array=zr, with_indices=True, delimiter='\t')
+        print twod_array_to_string(array=zr, with_indices=True, delimiter='\t', total=True)
         for p, f in solution['flows']:
             print p.sum_costs(), ",", f, ": ", p
 
