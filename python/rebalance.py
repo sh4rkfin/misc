@@ -17,7 +17,9 @@ parser.add_argument("-s", "--slave-factor", dest="s", type=int, help="slaves fac
 parser.add_argument("-w", "--working", dest="working", type=str, help="working directory", default="./working")
 parser.add_argument("-e", "--existing-solution", dest="existing", action='store_true', help="use existing solution",
                     default=False)
-parser.add_argument("-a", "--solver-algorithm", dest="solver", help="use existing solution", default='glpsol')
+parser.add_argument("-a", "--solver-algorithm", dest="solver",
+                    help="Which algorithm to use to solve the data placement problem. Options: [glpsol, custom]",
+                    default='glpsol')
 args = parser.parse_args()
 
 
@@ -41,7 +43,7 @@ problem = vbmap.VbMapProblem(args.n, args.r, args.s, args.working, prev)
 problem.set_use_existing_solution(args.existing)
 problem.generate_replica_networks()
 
-if args.solver == 'custom-min-cost-flow':
+if args.solver == 'custom':
     problem.solve_min_cost_flow()
 else:
     problem.generate_vbmap_with_colors()
