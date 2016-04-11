@@ -636,6 +636,9 @@ class VbMapProblem:
             else:
                 self.add_to_network(c, network)
         solution = VbMapProblem.augment_flows(network)
+        self.print_solution(network, solution)
+
+    def print_solution(self, network, solution):
         za = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
         zr = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
         x = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
@@ -657,7 +660,7 @@ class VbMapProblem:
         print twod_array_to_string(array=zr, with_indices=True, delimiter='\t')
         for p, f in solution['flows']:
             print p.sum_costs(), ",", f, ": ", p
-        
+
 
     def create_non_zero_flow_network(self, color):
         if not self.is_colored_vbmap_problem():
