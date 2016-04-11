@@ -11,4 +11,5 @@
 bin/
 pkg/
 erl/data/
-working/
+python/working/
+python/out.log
