@@ -2,18 +2,38 @@ import util
 
 
 class Arc:
-    def __init__(self, to_node, flow=0, base_arc=None):
+    """
+    Represents a connection to a specified node, the to_node, potentially
+    with flow that may be of different colors along this connection.
+
+    This arc may also be a "residual arc"; that is, a notional connection
+    that exists to track the idea that flow may be reduced along an
+    arc that runs in the opposite direction.
+
+    Residual arcs may have a specific color. That is, only flow of a given
+    color may be pushed along the arc.
+    """
+    def __init__(self, to_node, flow=0, base_arc=None, color=None):
         self._to_node = to_node
-        self._flow = {}
-        if flow != 0:
-            self._flow[None] = flow
         self._cost = 0
         self._capacity = float("inf")
+        if base_arc is None and color is not None:
+            raise ValueError("only residual arcs may be color specific")
         self._base_arc = base_arc
+        self._single_color = color
         self._total = None
+        self._flow = {}
+        if flow != 0:
+            self.set_flow(flow)
 
     def is_residual(self):
         return self._base_arc is not None
+
+    def base_arc(self):
+        return self._base_arc
+
+    def get_single_color(self):
+        return self._single_color
 
     def to_node(self):
         return self._to_node
@@ -37,7 +57,9 @@ class Arc:
         value = self._flow[color]
         return value if value else 0
 
-    def residual_capacity(self):
+    def residual_capacity(self, color=None):
+        if not self.is_color_supported(color):
+            return 0
         return self._capacity - self.total_flow()
 
     def adjust_capacity(self, value):
@@ -51,11 +73,20 @@ class Arc:
             self._total = sum(self._flow.viewvalues())
         return self._total
 
+    def is_color_supported(self, color):
+        return self._single_color is None or color == self._single_color
+
+    def assers_is_supported_color(self, color):
+        if not self.is_color_supported(color):
+            raise ValueError("color is not supported")
+
     def set_flow(self, value, color=None):
+        self.assers_is_supported_color(color)
         self._flow[color] = value
         self._total = None
 
     def change_flow(self, value, color=None):
+        self.assers_is_supported_color(color)
         flow = self._flow.get(color)
         if flow is None:
             self._flow[color] = value
@@ -66,11 +97,11 @@ class Arc:
     def augment_flow(self, flow, color=None):
         self.change_flow(flow, color)
 
-    def has_residual_capacity(self):
-        return self.residual_capacity() > 0
+    def has_residual_capacity(self, color=None):
+        return self.residual_capacity(color) > 0
 
-    def is_residual_arc_for(self, base_arc):
-        return self._base_arc == base_arc
+    def is_residual_arc_for(self, base_arc, color=None):
+        return self._base_arc == base_arc and self.is_color_supported(color)
 
     def __repr__(self):
         return "->{0}".format(self._to_node.key())
@@ -183,9 +214,9 @@ class Node:
             for a in self._arcs:
                 a.to_node().gather_nodes(collector)
 
-    def find_residual_arc(self, base_arc):
+    def find_residual_arc(self, base_arc, color=None):
         for a in self._arcs:
-            if a.is_residual_arc_for(base_arc):
+            if a.is_residual_arc_for(base_arc, color):
                 return a
 
     def get_non_zero_source_colors(self):
@@ -277,13 +308,19 @@ class Path:
         from_node = self._node
         for a in self._arcs:
             # augment the flow and reduce the residual capacity
-            a.augment_flow(value, color)
+            base_arc = a.base_arc()
+            if base_arc is None:
+                base_arc = a
+                residual_arc = a.to_node().find_residual_arc(a, color)
+                if residual_arc is None:
+                    residual_arc = Arc(from_node, 0, a, color)
+                    a.to_node().add_arc(residual_arc)
+            else:
+                residual_arc = a
+                value = -value
+
+            base_arc.augment_flow(value, color)
             # create / increase the residual back arc
-            residual_arc = a.to_node().find_residual_arc(a)
-            if residual_arc is None:
-                residual_arc = Arc(from_node, 0, a)
-                residual_arc.set_capacity(0)
-                a.to_node().add_arc(residual_arc)
             residual_arc.adjust_capacity(value)
             # update the from_node
             from_node = a.to_node()
@@ -406,14 +443,13 @@ class Network:
         destination.source(color) < 0 and the push as much flow as possible along the
         min cost path connecting these nodes.
 
-        :param network: the network
         :param source_node: the source node; source_node.source(color) is assumed > 0
         :param color: the color of the flow to push
         :param cost_threshold: the cost threshold
         :return: the Path and amount of flow that was pushed (and the source in
                     source_node reduced by); None and 0 if no path was found
         """
-        sp = self.create_shortest_path_tree(source_node)
+        sp = self.create_shortest_path_tree(source_node, color)
         ns = self.find_nodes_satisfying(lambda x: sp.get(x) is not None and x.source(color) < 0)
         dest_node = util.arg_min(ns, lambda x: sp[x]['dist'])
         if cost_threshold is None or sp[dest_node]['dist'] <= cost_threshold:
@@ -443,7 +479,7 @@ class Network:
         return result
 
     @staticmethod
-    def create_shortest_path_tree(source_node):
+    def create_shortest_path_tree(source_node, color=None):
         """
         Creates and returns a shortest path tree rooted at source_node. Should be Dijkstra.
         :param source_node: root of the shortest path tree
@@ -455,7 +491,7 @@ class Network:
         while True:
             current_dist = memo[current]['dist']
             for a in current.arcs():
-                if not a.has_residual_capacity():
+                if not a.has_residual_capacity(color):
                     continue
                 node = a.to_node()
                 node_memo = memo.get(node)
@@ -499,4 +535,3 @@ class Network:
             parent = memo[current]['parent']
         path.reverse()
         return Path(current, path)
-
