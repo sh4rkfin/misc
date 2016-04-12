@@ -625,10 +625,10 @@ class VbMapProblem:
                 break
 
         print "Network after augmentation"
-        network.draw(arcs_on_separate_lines=True)
+        print "total cost: ", network.calculate_cost()
         for p, f in flows:
             print f, ": ", p
-        print "total cost: ", network.calculate_cost()
+        network.draw(arcs_on_separate_lines=True)
         return {
             'result': result,
             'flows': flows,

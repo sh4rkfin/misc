@@ -1,5 +1,5 @@
 import util
-
+import heapq
 
 class Arc:
     """
@@ -269,7 +269,7 @@ class Path:
         return util.minimize(self._arcs, value_getter)
 
     def find_max_augmenting_flow(self, color=None):
-        result = self.get_min_value(Arc.residual_capacity)
+        result = self.get_min_value(lambda x: x.residual_capacity(color))
         result = min(result, self._node.source(color))
         result = min(result, -self.to_node().source(color))
         result = max(result, 0)
@@ -309,19 +309,22 @@ class Path:
         for a in self._arcs:
             # augment the flow and reduce the residual capacity
             base_arc = a.base_arc()
+            change = value
             if base_arc is None:
                 base_arc = a
                 residual_arc = a.to_node().find_residual_arc(a, color)
                 if residual_arc is None:
                     residual_arc = Arc(from_node, 0, a, color)
+                    residual_arc.set_cost(-base_arc.cost())
+                    residual_arc.set_capacity(0)
                     a.to_node().add_arc(residual_arc)
             else:
                 residual_arc = a
-                value = -value
+                change = -value
 
-            base_arc.augment_flow(value, color)
+            base_arc.augment_flow(change, color)
             # create / increase the residual back arc
-            residual_arc.adjust_capacity(value)
+            residual_arc.adjust_capacity(change)
             # update the from_node
             from_node = a.to_node()
 
@@ -432,6 +435,14 @@ class Network:
             result[path] = min_flow
         return result
 
+    def get_total_positive_source(self):
+        result = 0
+        for n in self._node_map.viewvalues():
+            src = n.total_source()
+            if src > 0:
+                result += src
+        return result
+
     def push_min_cost_flow(self, source_node, color=None, cost_threshold=None):
         """
         Pushes as much flow as possible of the specified color from source_node to some
@@ -449,7 +460,7 @@ class Network:
         :return: the Path and amount of flow that was pushed (and the source in
                     source_node reduced by); None and 0 if no path was found
         """
-        sp = self.create_shortest_path_tree(source_node, color)
+        sp = self.create_shortest_path_tree2(source_node, color)
         ns = self.find_nodes_satisfying(lambda x: sp.get(x) is not None and x.source(color) < 0)
         dest_node = util.arg_min(ns, lambda x: sp[x]['dist'])
         if cost_threshold is None or sp[dest_node]['dist'] <= cost_threshold:
@@ -481,7 +492,7 @@ class Network:
     @staticmethod
     def create_shortest_path_tree(source_node, color=None):
         """
-        Creates and returns a shortest path tree rooted at source_node. Should be Dijkstra.
+        Creates and returns a shortest path tree rooted at source_node.
         :param source_node: root of the shortest path tree
         :return: the shortest path tree
         """
@@ -515,6 +526,43 @@ class Network:
             if min_dist is None:
                 break
             current = arg_min
+        return memo
+
+    @staticmethod
+    def create_shortest_path_tree2(source_node, color=None):
+        """
+        Creates and returns a shortest path tree rooted at source_node. Should be Dijkstra.
+        :param source_node: root of the shortest path tree
+        :return: the shortest path tree
+        """
+        memo = {}
+        unvisited = []
+        heapq.heappush(unvisited, (0, source_node))
+        memo[source_node] = {'dist': 0, 'parent': None, 'arc': None}
+        while unvisited:
+            heap_elem = heapq.heappop(unvisited)
+            current = heap_elem[1]
+            current_dist = memo[current]['dist']
+            for a in current.arcs():
+                if not a.has_residual_capacity(color):
+                    continue
+                node = a.to_node()
+                node_memo = memo.get(node)
+                if node_memo is None:
+                    memo[node] = {'dist': float('inf')}
+                    node_memo = memo[node]
+                node_dist = node_memo['dist']
+                tentative_dist = current_dist + a.cost()
+                if tentative_dist < node_dist:
+                    node_memo['dist'] = tentative_dist
+                    node_memo['parent'] = current
+                    node_memo['arc'] = a
+                    if node_dist < float('inf'):
+                        idx = unvisited.index((node_dist, node))
+                        unvisited[idx] = (tentative_dist, node)
+                        heapq.heapify(unvisited)
+                    else:
+                        heapq.heappush(unvisited, (tentative_dist, node))
         return memo
 
     @staticmethod
