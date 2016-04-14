@@ -460,7 +460,7 @@ class Network:
         :return: the Path and amount of flow that was pushed (and the source in
                     source_node reduced by); None and 0 if no path was found
         """
-        sp = self.create_shortest_path_tree2(source_node, color)
+        sp = self.create_shortest_path_tree(source_node, color)
         ns = self.find_nodes_satisfying(lambda x: sp.get(x) is not None and x.source(color) < 0)
         dest_node = util.arg_min(ns, lambda x: sp[x]['dist'])
         if cost_threshold is None or sp[dest_node]['dist'] <= cost_threshold:
@@ -548,7 +548,9 @@ class Network:
                     continue
                 node = a.to_node()
                 node_memo = memo.get(node)
+                is_new_node = False
                 if node_memo is None:
+                    is_new_node = True
                     memo[node] = {'dist': float('inf')}
                     node_memo = memo[node]
                 node_dist = node_memo['dist']
@@ -557,12 +559,17 @@ class Network:
                     node_memo['dist'] = tentative_dist
                     node_memo['parent'] = current
                     node_memo['arc'] = a
-                    if node_dist < float('inf'):
-                        idx = unvisited.index((node_dist, node))
+                    idx = -1
+                    if not is_new_node:
+                        try:
+                            idx = unvisited.index((node_dist, node))
+                        except ValueError as ve:
+                            pass
+                    if idx < 0:
+                        heapq.heappush(unvisited, (tentative_dist, node))
+                    else:
                         unvisited[idx] = (tentative_dist, node)
                         heapq.heapify(unvisited)
-                    else:
-                        heapq.heappush(unvisited, (tentative_dist, node))
         return memo
 
     @staticmethod
