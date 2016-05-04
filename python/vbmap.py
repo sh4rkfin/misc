@@ -4,6 +4,7 @@ from multidimarray import MultiDimArray
 from network import Arc, Node, Network, Path
 import copy
 import math
+import json
 
 
 def get_replica_gen_model():
@@ -101,6 +102,32 @@ def get_vbmap_gen_with_colors_connections_model():
     result_file_name_template = "result-n$n-colorvbmap.txt"
     m = model.Model(model_file_name, data_string)
     return model.ModelInstance(m, None, data_file_name_template, result_file_name_template, None)
+
+
+def read_bucket_config(filename):
+    with open(filename, "r") as f:
+        result = json.load(f)
+        return result['vBucketServerMap']
+
+def do_bucket_config(start_bucket_config):
+    data = read_bucket_config(start_bucket_config)
+    replicas = data['numReplicas']
+    vb_map = data['vBucketMap']
+    nodes = data['serverList']
+    reps = [[0 for i in xrange(len(nodes))] for j in xrange((len(nodes)))]
+    avb = [0 for i in xrange(len(nodes))]
+    rvb = [0 for i in xrange(len(nodes))]
+    for chain in vb_map:
+        ni = chain[0]
+        avb[ni] += 1
+        for j in xrange(replicas):
+            nj = chain[1 + j]
+            rvb[nj] += 1
+            reps[ni][nj] += 1
+    print "active vbuckets: ", avb
+    print "replica vbuckets:", rvb
+    print "replication flows:"
+    print twod_array_to_string(reps, with_indices=True, delimiter='\t')
 
 
 def node_compare(n1, n2):
