@@ -36,7 +36,10 @@ if not os.path.isdir(args.working):
     sys.exit(1)
 
 if args.begin_bucket_config:
-    vbmap.do_bucket_config(args.begin_bucket_config)
+    if not args.end_bucket_config:
+        vbmap.do_bucket_config(args.begin_bucket_config)
+    else:
+        vbmap.calculate_cost(args.begin_bucket_config, args.end_bucket_config)
 else:
     use_prev = True
     prev = None

@@ -114,9 +114,9 @@ def do_bucket_config(start_bucket_config):
     replicas = data['numReplicas']
     vb_map = data['vBucketMap']
     nodes = data['serverList']
-    reps = [[0 for i in xrange(len(nodes))] for j in xrange((len(nodes)))]
-    avb = [0 for i in xrange(len(nodes))]
-    rvb = [0 for i in xrange(len(nodes))]
+    reps = [[0 for _ in xrange(len(nodes))] for _ in xrange(len(nodes))]
+    avb = [0 for _ in xrange(len(nodes))]
+    rvb = [0 for _ in xrange(len(nodes))]
     for chain in vb_map:
         ni = chain[0]
         avb[ni] += 1
@@ -128,6 +128,30 @@ def do_bucket_config(start_bucket_config):
     print "replica vbuckets:", rvb
     print "replication flows:"
     print twod_array_to_string(reps, with_indices=True, delimiter='\t')
+    return data
+
+def calculate_cost(begin_bucket_config, end_bucket_config):
+    # Note that this function only works for straight adds with 1 replica
+    start = do_bucket_config(begin_bucket_config)
+    end = do_bucket_config(end_bucket_config)
+    node_count = max(len(start['serverList']), len(end['serverList']))
+    active_moves = [[0 for _ in xrange(node_count)] for _ in xrange(node_count)]
+    replica_moves = [[0 for _ in xrange(node_count)] for _ in xrange(node_count)]
+    end_vb_map = end['vBucketMap']
+    begin_vb_map = start['vBucketMap']
+    i = 0
+    for end_chain in end_vb_map:
+        begin_chain = begin_vb_map[i]
+        active_moves[begin_chain[0]][end_chain[0]] += 1
+        replica_moves[begin_chain[1]][end_chain[1]] += 1
+        i += 1
+    print "active moves:"
+    print twod_array_to_string(active_moves, with_indices=True, delimiter='\t', total=True)
+    print "replica moves:"
+    print twod_array_to_string(replica_moves, with_indices=True, delimiter='\t', total=True)
+    print "active move cost: ", util.sum_off_diagonal(active_moves)
+    print "replica move cost: ", util.sum_off_diagonal(replica_moves)
+    print "total cost: ", util.sum_off_diagonal(active_moves) + util.sum_off_diagonal(replica_moves)
 
 
 def node_compare(n1, n2):
