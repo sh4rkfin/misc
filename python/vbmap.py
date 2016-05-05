@@ -708,26 +708,63 @@ class VbMapProblem:
         solution = VbMapProblem.augment_flows(network)
         self.print_solution(network, solution)
 
+    @staticmethod
+    def get_unique_nodes(network):
+        nodes = network.find_nodes_satisfying(
+            lambda x: x.key()[0] == 'prev_avb' or x.key()[0] == 'avb')
+        return set([n.key()[1] for n in nodes])
+
+    @staticmethod
+    def find_flow_between_nodes_network(network, from_node_name, to_node_name, color_determiner):
+        result = {}
+        prev_avbs = network.find_nodes_satisfying(lambda x: x.key()[0] == from_node_name)
+        unique_nodes = VbMapProblem.get_unique_nodes(network)
+        count = len(unique_nodes)
+        for node in prev_avbs:
+            node_id = node.key()[1]
+            for arc in node.arcs():
+                to_node = arc.to_node()
+                if to_node.key()[0] == to_node_name:
+                    color = color_determiner(node, to_node)
+                    zac = result.get(color)
+                    if not zac:
+                        result[color] = zac = [[0 for _ in xrange(count)] for _ in xrange(count)]
+                    to_id = to_node.key()[1]
+                    flow = arc.flow(color)
+                    zac[node_id][to_id] += flow
+        return result
+
     def print_solution(self, network, solution):
-        za = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
-        zr = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
-        x = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
         total_cost = network.calculate_cost()
+        za = VbMapProblem.find_flow_between_nodes_network(network,
+                                                          'prev_avb', 'avb',
+                                                          lambda n1, n2: n1.key()[2])
+        for color, zac in za.items():
+            print "active moves for color:", color
+            print twod_array_to_string(array=zac, with_indices=True, delimiter='\t', total=True)
+
+        zr = VbMapProblem.find_flow_between_nodes_network(network,
+                                                          'rvb', 'prev_rvb',
+                                                          lambda n1, n2: n2.key()[2])
+        for color, zrc in zr.items():
+            print "replica moves for color:", color
+            print twod_array_to_string(array=zrc, with_indices=True, delimiter='\t', total=True)
+
+        za_total = util.accumulate(za.viewvalues(), util.add_to)
+        print "total active vbucket moves:"
+        print twod_array_to_string(array=za_total, with_indices=True, delimiter='\t', total=True)
+        zr_total = util.accumulate(zr.viewvalues(), util.add_to)
+        print "total replica vbucket moves:"
+        print twod_array_to_string(array=zr_total, with_indices=True, delimiter='\t', total=True)
+
+        x = [[0 for _ in range(self.node_count)] for _ in range(self.node_count)]
         for p, f in solution['flows']:
-            from_node = p.from_node().key()[1]
-            to_node = p[0].to_node().key()[1]
-            za[from_node][to_node] += f
             from_node = p[0].to_node().key()[1]
             to_node = p[1].to_node().key()[1]
             x[from_node][to_node] += f
-            from_node = p[1].to_node().key()[1]
-            to_node = p[2].to_node().key()[1]
-            zr[from_node][to_node] += f
         print "solution result:", solution['result']
         print "total cost:", total_cost
-        print twod_array_to_string(array=za, with_indices=True, delimiter='\t', total=True)
         print twod_array_to_string(array=x, with_indices=True, delimiter='\t')
-        print twod_array_to_string(array=zr, with_indices=True, delimiter='\t', total=True)
         for p, f in solution['flows']:
             print p.sum_costs(), ",", f, ": ", p
 

@@ -73,19 +73,19 @@ def accumulate(collection, accumulator, initial_value=None):
     return result
 
 
-def arg_max(lst, value):
+def arg_max(lst, value_function):
     max_val, result = None, None
     for a in lst:
-        if max_val is None or max_val < value(a):
-            max_val, result = value(a), a
+        if max_val is None or max_val < value_function(a):
+            max_val, result = value_function(a), a
     return result
 
 
-def arg_min(lst, value):
+def arg_min(lst, value_function):
     min_val, result = None, None
     for a in lst:
-        if min_val is None or min_val > value(a):
-            min_val, result = value(a), a
+        if min_val is None or min_val > value_function(a):
+            min_val, result = value_function(a), a
     return result
 
 

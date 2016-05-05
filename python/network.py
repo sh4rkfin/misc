@@ -54,7 +54,7 @@ class Arc:
         return self._capacity
 
     def flow(self, color=None):
-        value = self._flow[color]
+        value = self._flow.get(color)
         return value if value else 0
 
     def residual_capacity(self, color=None):
@@ -205,8 +205,8 @@ class Node:
                 return a
         return None
 
-    def get_max_arc(self, key_function):
-        return util.arg_max(self._arcs, key_function)
+    def get_max_arc(self, value_function):
+        return util.arg_max(self._arcs, value_function)
 
     def gather_nodes(self, collector):
         if self not in collector:
