@@ -529,6 +529,47 @@ class Network:
         return memo
 
     @staticmethod
+    def create_shortest_path_tree3(source_node, color=None):
+        """
+        Creates and returns a shortest path tree rooted at source_node.
+        :param source_node: root of the shortest path tree
+        :return: the shortest path tree
+        """
+        memo = {}
+        unvisited = {source_node: True}
+        memo[source_node] = {'dist': 0, 'parent': None, 'arc': None}
+        current = source_node
+        while True:
+            del unvisited[current]
+            current_dist = memo[current]['dist']
+            for a in current.arcs():
+                if not a.has_residual_capacity(color):
+                    continue
+                node = a.to_node()
+                node_memo = memo.get(node)
+                if node_memo is None:
+                    unvisited[node] = True
+                    memo[node] = {'dist': float('inf')}
+                    node_memo = memo[node]
+                node_dist = node_memo['dist']
+                tentative_dist = current_dist + a.cost()
+                if tentative_dist < node_dist:
+                    unvisited[node] = True
+                    node_memo['dist'] = tentative_dist
+                    node_memo['parent'] = current
+                    node_memo['arc'] = a
+            min_dist, arg_min = None, None
+            for n in unvisited:
+                m = memo[n]
+                if min_dist is None or min_dist > m['dist']:
+                    min_dist = m['dist']
+                    arg_min = n
+            if min_dist is None:
+                break
+            current = arg_min
+        return memo
+
+    @staticmethod
     def create_shortest_path_tree2(source_node, color=None):
         """
         Creates and returns a shortest path tree rooted at source_node. Should be Dijkstra.
