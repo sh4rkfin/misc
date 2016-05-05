@@ -163,7 +163,7 @@ def node_compare(n1, n2):
     :param n2: second node to compare
     :return:
     """
-    rank = {'prev_avb': 0, 'avb': 1, 'rvb': 2, 'prev_rvb': 3}
+    rank = {'prev_avb': 0, 'avb': 1, 'avbp': 2, 'rvbp': 3, 'rvb': 4, 'prev_rvb': 5}
     n1_key, n2_key = n1.key(), n2.key()
     r1, r2 = rank[n1_key[0]], rank[n2_key[0]]
     if r1 == r2:
@@ -624,12 +624,25 @@ class VbMapProblem:
                     a = Arc(n2)
                     n1.add_arc(a)
                     a.set_cost(1 if i != j else 0)
+        avbs = network.find_nodes_satisfying(lambda x: x.key()[0] == 'avb')
+        for n1 in avbs:
+            key = ('avbp', n1.key()[1])
+            n2 = network.find_node(key)
+            if n2 is None:
+                n2 = Node(key)
+                network.add_node(n2)
+                arc = Arc(n2)
+                arc.set_capacity(math.floor(1024.0 / len(avbs)))
+                arc.set_cost(-100000)
+                n1.add_arc(arc)
+                n1.add_arc(Arc(n2))
+
         replica_network = self._replica_networks[0]
         for i, connections in enumerate(replica_network):
             for j, connection in enumerate(connections):
                 if connection != 0:
-                    n1 = network.find_or_create_node(('avb', i))
-                    n2 = network.find_or_create_node(('rvb', j))
+                    n1 = network.find_or_create_node(('avbp', i))
+                    n2 = network.find_or_create_node(('rvbp', j))
                     a = n1.get_arc(n2)
                     if not a:
                         a = Arc(n2)
@@ -637,6 +650,20 @@ class VbMapProblem:
                         capacity = math.ceil(1024.0 / (self.node_count * self.slave_factor))
                         print "cap: ", capacity
                         a.set_capacity(capacity)
+
+        rvbps = network.find_nodes_satisfying(lambda x: x.key()[0] == 'rvbp')
+        for n1 in rvbps:
+            key = ('rvb', n1.key()[1])
+            n2 = network.find_node(key)
+            if n2 is None:
+                n2 = Node(key)
+                network.add_node(n2)
+                arc = Arc(n2)
+                arc.set_capacity(math.floor(1024.0 / len(avbs)))
+                arc.set_cost(-100000)
+                n1.add_arc(arc)
+                n1.add_arc(Arc(n2))
+
         prev_rvb = self.prev_rvb()[color]
         for i, r in enumerate(prev_rvb):
             if r > 0:
@@ -688,7 +715,7 @@ class VbMapProblem:
     @staticmethod
     def augment_flows(network):
         solution = {'flows': []}
-        for threshold in [0, 1, 2, None]:
+        for threshold in [-1, 0, 1, None]:
             result = VbMapProblem.push_toward_feasibility(network, threshold)
             print "total cost: ", network.calculate_cost()
             solution['result'] = result['result']
@@ -715,7 +742,7 @@ class VbMapProblem:
         return set([n.key()[1] for n in nodes])
 
     @staticmethod
-    def find_flow_between_nodes_network(network, from_node_name, to_node_name, color_determiner):
+    def find_flow_between_nodes_in_network(network, from_node_name, to_node_name, color_determiner):
         result = {}
         prev_avbs = network.find_nodes_satisfying(lambda x: x.key()[0] == from_node_name)
         unique_nodes = VbMapProblem.get_unique_nodes(network)
@@ -730,22 +757,29 @@ class VbMapProblem:
                     if not zac:
                         result[color] = zac = [[0 for _ in xrange(count)] for _ in xrange(count)]
                     to_id = to_node.key()[1]
-                    flow = arc.flow(color)
+                    flow = arc.flow(color) if color is None else arc.total_flow()
                     zac[node_id][to_id] += flow
         return result
 
     def print_solution(self, network, solution):
         total_cost = network.calculate_cost()
-        za = VbMapProblem.find_flow_between_nodes_network(network,
-                                                          'prev_avb', 'avb',
-                                                          lambda n1, n2: n1.key()[2])
+        adjustment = 0
+        avbs = network.find_nodes_satisfying(lambda x: x.key()[0] == 'avb' or x.key()[0] == 'rvbp')
+        for n in avbs:
+            for a in n.arcs():
+                if a.cost() < 0:
+                    adjustment -= a.cost() * a.total_flow()
+
+        za = VbMapProblem.find_flow_between_nodes_in_network(network,
+                                                             'prev_avb', 'avb',
+                                                             lambda n1, n2: n1.key()[2])
         for color, zac in za.items():
             print "active moves for color:", color
             print twod_array_to_string(array=zac, with_indices=True, delimiter='\t', total=True)
 
-        zr = VbMapProblem.find_flow_between_nodes_network(network,
-                                                          'rvb', 'prev_rvb',
-                                                          lambda n1, n2: n2.key()[2])
+        zr = VbMapProblem.find_flow_between_nodes_in_network(network,
+                                                             'rvb', 'prev_rvb',
+                                                             lambda n1, n2: n2.key()[2])
         for color, zrc in zr.items():
             print "replica moves for color:", color
             print twod_array_to_string(array=zrc, with_indices=True, delimiter='\t', total=True)
@@ -763,7 +797,7 @@ class VbMapProblem:
             to_node = p[1].to_node().key()[1]
             x[from_node][to_node] += f
         print "solution result:", solution['result']
-        print "total cost:", total_cost
+        print "total cost:", total_cost + adjustment
         print twod_array_to_string(array=x, with_indices=True, delimiter='\t')
         for p, f in solution['flows']:
             print p.sum_costs(), ",", f, ": ", p

@@ -396,6 +396,9 @@ class Network:
             result += n.calculate_cost()
         return result
 
+    def find_node(self, key):
+        return self._node_map.get(key)
+
     def find_or_create_node(self, key):
         node = self._node_map.get(key)
         if node is None:
