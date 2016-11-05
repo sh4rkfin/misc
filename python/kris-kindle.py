@@ -141,11 +141,10 @@ def main():
         for p in people:
             message = [
                 "Hello {0}:".format(p.name),
-                "This is a test e-mail to see if I have the email addresses correct and to "
-                "help me debug any email sending issues I have. No action is necessary on your part "
-                "and you can feel free to delete this mail.",
+                "This is a test e-mail from your friend Kris, to see if I have your email addresses correct. "
+                "No action is necessary on your part and you can feel free to delete this mail.",
                 "Yours,",
-                "Kris"
+                "Kris :-)"
             ]
             sendmail(p.email, "Test email from Kris", message)
         exit(0)
@@ -172,16 +171,16 @@ def main():
                 message = [
                     "Hello {0}:".format(assignments[p]),
                     "",
-                    "Welcome to the 2015 incarnation of our long-established tradition! If you believe "
+                    "Welcome to the 2016 incarnation of our long-established tradition! If you believe "
                     "there to be a problem with your assignment let me know and we can rerun.",
                     "",
                     "Your present-buying assignment is: {0}".format(p),
                     "",
-                    "Happy Christmas-shopping!",
+                    "Happy Christmas shopping!",
                     "Kris :-)"
                 ]
                 to_person = people_map[assignments[p]]
-                sendmail(to_person.email, "Your Kris Kindle 2015 assignment!", message)
+                sendmail(to_person.email, "Your Kris Kindle 2016 assignment!", message)
     else:
         print "didn't work - you will need to rerun"
         exit(1)
