@@ -171,16 +171,22 @@ def main():
                 message = [
                     "Hello {0}:".format(assignments[p]),
                     "",
-                    "Welcome to the 2016 incarnation of our long-established tradition! If you believe "
-                    "there to be a problem with your assignment let me know and we can rerun.",
+                    "I'd like to wish you an early happy Christmas and let you know that your assignment in the 2017 ",
+                    "Kris Kindle is: {0}".format(p),
                     "",
-                    "Your present-buying assignment is: {0}".format(p),
+                    "You might be wondering how much to spend. After an extremely brief discussion and very little ",
+                    "thought, the amount was set at approximately 30 EUR / 35 USD. Given how little thought went ",
+                    "into it, no problem if you'd like to spend more or less than this amount.",
+                    "",
+                    "If you have any questions, send Dave F. an e-mail. He's pretty useful at forwarding the ",
+                    "questions to Mir, who is the ultimate authority.",
                     "",
                     "Happy Christmas shopping!",
+                    "",
                     "Kris :-)"
                 ]
                 to_person = people_map[assignments[p]]
-                sendmail(to_person.email, "Your Kris Kindle 2016 assignment!", message)
+                sendmail(to_person.email, "Your Kris Kindle 2017 assignment!", message)
     else:
         print "didn't work - you will need to rerun"
         exit(1)
