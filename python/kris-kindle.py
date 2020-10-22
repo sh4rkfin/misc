@@ -169,24 +169,24 @@ def main():
         if valid:
             for p in assignments:
                 message = [
-                    "Hello {0}:".format(assignments[p]),
+                    "Hello {}:".format(assignments[p]),
                     "",
-                    "I'd like to wish you an early happy Christmas and let you know that your assignment in the 2018 "
-                    "Kris Kindle is: {0}".format(p),
+                    "I'd like to wish you an early happy Christmas and let you know that your assignment in the 2020 "
+                    "Kris Kindle is: {}.".format(p),
                     "",
-                    "You might be wondering how much to spend. After a brief discussion and very little "
-                    "thought, the amount was set at approximately 30 EUR / 35 USD. Given how little thought went "
-                    "into it, no problem if you'd like to spend more or less than this amount.",
+                    "As last year, the suggested amount to spend is somewhere around 30 EUR or 35 USD. No problem "
+                    "if you'd like to spend a little more or less. The main thing is to not panic and to have fun "
+                    "even if you got Granddad Fred.",
                     "",
-                    "If you have any questions, send Dave F. an e-mail. He's pretty useful at forwarding the "
-                    "questions to Mir, who is the ultimate authority.",
+                    "Let Dave F. know if you have any questions. He'll consult with Mir and get back to you with the "
+                    "answer.",
                     "",
-                    "Happy Christmas shopping!",
+                    "Have fun shopping for your Kris Kindle and happy Christmas!",
                     "",
                     "Kris :-)"
                 ]
                 to_person = people_map[assignments[p]]
-                sendmail(to_person.email, "Your Kris Kindle 2018 assignment!", message)
+                sendmail(to_person.email, "Your Kris Kindle 2019 assignment!", message)
     else:
         print "didn't work - you will need to rerun"
         exit(1)
