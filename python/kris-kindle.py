@@ -1,5 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import smtplib
+from email.message import EmailMessage
 import random
 import argparse
 import re
@@ -21,6 +24,7 @@ Don't worry: this all doesn't mean your Gmail password will be sent in
 the clear. The script sets up a TLS connection to the server and
 login and the email themselves are encrypted and the 'low security apps'
 setting can be reverted after you send the e-mails. """)
+
 parser.add_argument("-f", "--people-file", dest="people_file", required=True, help="""\
 File describing the Kris Kindle participants. The format of the file
 is as follows:
@@ -29,22 +33,52 @@ So for example if Anna is participating but shouldn't be assigned Kiera
 and vice versa, the Anna and Kiera lines in the file should written:
 Anna, anna@example.com, Kiera
 Kiera, kiera@example.com, Anna""")
+
 parser.add_argument("-n", "--no-send", dest="no_send", action='store_true', help="""\
 Dont send emails; instead show what would have been sent""")
+
 parser.add_argument("--only-email", dest="only_email", help="""\
 If mails are to be sent, they will only be sent to this e-mail address.
 Useful for testing to see how the received e-mails look.""")
+
 parser.add_argument("-t", dest="send_test_emails", action='store_true', help="""\
 Send test e-mails to participants. The test e-mail does not contain the
 Kris Kindle assignments and it's useful for validating that the email
 addresses that you have are correct.""")
+
 parser.add_argument("-u", "--user", dest="user", required=True,
                     help="Gmail account that will be used to send the e-mails", )
+
 parser.add_argument("-p", "--password", dest="password",
                     help="Password; you will be prompted if it's not supplied on the command line")
 args = parser.parse_args()
 if not args.password:
     args.password = getpass.getpass()
+
+
+SUBJECT = "Your Kris Kindle 2021 assignment!"
+MESSAGE = """Hello {person}:
+
+I'd like to wish you an early happy Christmas and let you know that your assignment in the 2021
+Kris Kindle is: {assignment}.
+
+As last year, the suggested amount to spend is somewhere around €30 or $35. No problem if you'd
+to spend a little more or less. The main thing is to not panic and to have fun even if you got
+Grandad Fred.
+
+Let Dave F. know if you have any questions. He'll consult with Mir and get back to you with the
+answer.
+
+Have fun shopping for your Kris Kindle and happy Christmas!
+
+Kris :-)"""
+
+TEST_SUBJECT = "Test email from Kris"
+TEST_MESSAGE = """Hello {person}
+This is a test e-mail from your friend Kris, to see if I have your email address correct.
+No action is necessary on your part and you can feel free to delete this mail.
+Yours,
+Kris :-)"""
 
 
 class Person:
@@ -73,51 +107,54 @@ class Person:
                 if len(values) > 2:
                     exclusions = values[2:]
                 elif len(values) < 2:
-                    print "Invalid person data: ", line
+                    print("Invalid person data: ", line)
                     exit(1)
                 p = Person(values[0], values[1], exclusions)
                 if p.name in person_map:
-                    print "Duplicate name: ", line
+                    print("Duplicate name: ", line)
                     exit(2)
                 result.append(p)
                 person_map[p.name] = p
             for p in result:
                 for excluded in p.exclusions:
                     if excluded not in person_map:
-                        print "Excluded name not recognized for: {0} excluded name: '{1}'".format(p, excluded)
+                        print("Excluded name not recognized for: {0} excluded name: '{1}'".format(p, excluded))
                         exit(3)
             return result
 
 
-def sendmail(to_addr, subject, message):
+def send_mail(to_addr, subject, message):
     from_addr = args.user
-    full_msg = [
-        "From: {0}".format(from_addr),
-        "To: {0}".format(to_addr),
-        "Subject: {0}".format(subject),
-        ""
-    ] + message
-    msg = "\r\n".join(full_msg)
+    msg = EmailMessage()
+    msg.set_content(message)
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
 
     if args.no_send:
-        print "would send this message to: {0}\n{1}".format(to_addr, message)
+        print("----------------------------------------------------")
+        print("would send this message to: {0}\n{1}".format(to_addr, message))
         return
 
-    if args.only_email and args.only_email != to_addr:
-        return
-    print "sending message to {0}".format(to_addr)
+    if not args.only_email or args.only_email == to_addr:
+        print("sending message to {0}".format(to_addr))
 
-    s = smtplib.SMTP('smtp.gmail.com:587')
-    s.ehlo()
-    s.starttls()
-    s.login(args.user, args.password)
-    s.sendmail(from_addr, to_addr, msg)
-    s.quit()
+        s = smtplib.SMTP('smtp.gmail.com:587')
+        s.ehlo()
+        s.starttls()
+        s.login(args.user, args.password)
+        s.send_message(msg)
+        s.quit()
 
 
 def maybe_assign(people):
+    """
+    :param people: list of Persons to assign
+    :return: dict mapping assignee to person who has the assignee or an empty
+             dictionary if the attempt to assign didn't work
+    """
     people = sorted(people, key=lambda x: len(x.exclusions), reverse=True)
-    print people
+    print(people)
     assignments = {}
     for person in people:
         recipients = [p for p in people
@@ -125,9 +162,9 @@ def maybe_assign(people):
                           p != person and
                           p.name not in person.exclusions)]
         if not recipients:
-            print "didn't work"
-            print "assigned: {0}".format(assignments)
-            print "{0} -> {1}".format(person, recipients)
+            print("didn't work")
+            print("assigned: {0}".format(assignments))
+            print("{0} -> {1}".format(person, recipients))
             return {}
         recipient = recipients[random.randint(0, len(recipients) - 1)]
         assignments[recipient.name] = person.name
@@ -139,56 +176,34 @@ def main():
 
     if args.send_test_emails:
         for p in people:
-            message = [
-                "Hello {0}:".format(p.name),
-                "This is a test e-mail from your friend Kris, to see if I have your email addresses correct. "
-                "No action is necessary on your part and you can feel free to delete this mail.",
-                "Yours,",
-                "Kris :-)"
-            ]
-            sendmail(p.email, "Test email from Kris", message)
+            message = TEST_MESSAGE.format(person=p.name)
+            send_mail(p.email, TEST_SUBJECT, message)
         exit(0)
 
     assignments = {}
-    for attempt in range(5):
+    for attempt in range(10):
         assignments = maybe_assign(people)
         if assignments:
             break
 
     people_map = {p.name: p for p in people}
     if assignments:
-        print "success!"
+        print("success!")
         for p in assignments:
-            print "{0}\t->\t{1}".format(assignments[p], p)
+            print("{0}\t->\t{1}".format(assignments[p], p))
         valid = True
         for recipient in assignments:
             buyer = people_map[assignments[recipient]]
             if recipient in buyer.exclusions:
-                print "broken!"
+                print("broken!")
                 valid = False
         if valid:
             for p in assignments:
-                message = [
-                    "Hello {}:".format(assignments[p]),
-                    "",
-                    "I'd like to wish you an early happy Christmas and let you know that your assignment in the 2020 "
-                    "Kris Kindle is: {}.".format(p),
-                    "",
-                    "As last year, the suggested amount to spend is somewhere around 30 EUR or 35 USD. No problem "
-                    "if you'd like to spend a little more or less. The main thing is to not panic and to have fun "
-                    "even if you got Granddad Fred.",
-                    "",
-                    "Let Dave F. know if you have any questions. He'll consult with Mir and get back to you with the "
-                    "answer.",
-                    "",
-                    "Have fun shopping for your Kris Kindle and happy Christmas!",
-                    "",
-                    "Kris :-)"
-                ]
+                message = MESSAGE.format(person=assignments[p], assignment=p)
                 to_person = people_map[assignments[p]]
-                sendmail(to_person.email, "Your Kris Kindle 2019 assignment!", message)
+                send_mail(to_person.email, SUBJECT, message)
     else:
-        print "didn't work - you will need to rerun"
+        print("didn't work - you will need to rerun")
         exit(1)
 
 if __name__ == "__main__":
