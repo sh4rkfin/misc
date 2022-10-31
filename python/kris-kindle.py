@@ -13,17 +13,10 @@ A hopefully handy script that randomly compute Kris Kindle assignments
 and sends out e-mails letting each person involved know who they have
 to buy a gift for.
 
-Note: currently you need an Gmail address to run this script and
-additionally you will need to configure your Gmail account to allow
-'low security' apps to connect to it and use it as an SMTP server.
-Once you're logged in to the appropriate GMail account, you can do
-this from the https://www.google.com/settings/security/lesssecureapps
-page.
-
-Don't worry: this all doesn't mean your Gmail password will be sent in
-the clear. The script sets up a TLS connection to the server and
-login and the email themselves are encrypted and the 'low security apps'
-setting can be reverted after you send the e-mails. """)
+Note: you need an SMTP relay account to run this script. GMail used to
+provide a nice SMTP relay service this but no longer does so for free,
+so you might want to consider alternatives (such as SendInBlue).
+""")
 
 parser.add_argument("-f", "--people-file", dest="people_file", required=True, help="""\
 File describing the Kris Kindle participants. The format of the file
@@ -41,13 +34,16 @@ parser.add_argument("--only-email", dest="only_email", help="""\
 If mails are to be sent, they will only be sent to this e-mail address.
 Useful for testing to see how the received e-mails look.""")
 
+parser.add_argument("--from", dest="from_user", help="""\
+If mails are to be sent, they sender is this e-mail address.""")
+
 parser.add_argument("-t", dest="send_test_emails", action='store_true', help="""\
 Send test e-mails to participants. The test e-mail does not contain the
 Kris Kindle assignments and it's useful for validating that the email
 addresses that you have are correct.""")
 
 parser.add_argument("-u", "--user", dest="user", required=True,
-                    help="Gmail account that will be used to send the e-mails", )
+                    help="SMTP relay account that will be used to send the e-mails", )
 
 parser.add_argument("-p", "--password", dest="password",
                     help="Password; you will be prompted if it's not supplied on the command line")
@@ -56,20 +52,24 @@ if not args.password:
     args.password = getpass.getpass()
 
 
-SUBJECT = "Your Kris Kindle 2021 assignment!"
+SUBJECT = "Your Kris Kindle 2022 assignment!"
 MESSAGE = """Hello {person}:
 
-I'd like to wish you an early happy Christmas and let you know that your assignment in the 2021
-Kris Kindle is: {assignment}.
+Bet you weren't expecting to receive an email from me! Can you believe it's already that
+time again?
 
-As last year, the suggested amount to spend is somewhere around €30 or $35. No problem if you'd
-to spend a little more or less. The main thing is to not panic and to have fun even if you got
-Grandad Fred.
+Your assignment in the 2022 Kris Kindle is: <b>{assignment}</b>.
 
-Let Dave F. know if you have any questions. He'll consult with Mir and get back to you with the
-answer.
+The suggested amount to spend is approximately €30 or $30. No problem if you'd to spend a
+little more or less.
 
-Have fun shopping for your Kris Kindle and happy Christmas!
+Here's a Yuletide joke to get you in a Christmassy mood.
+
+Q: Who's Santa's favourite singer?
+A: Elfish Presley.
+
+Let Dave F. know if you have any questions. He'll ask Mir and get back to you with the answer.
+Have fun shopping for your Kris Kindle!
 
 Kris :-)"""
 
@@ -123,13 +123,13 @@ class Person:
             return result
 
 
-def send_mail(to_addr, subject, message):
-    from_addr = args.user
+def send_mail(to_addr, to_name, subject, message):
+    from_addr = args.from_user
     msg = EmailMessage()
     msg.set_content(message)
     msg["Subject"] = subject
     msg["From"] = from_addr
-    msg["To"] = to_addr
+    msg["To"] = f"{to_name} <{to_addr}>"
 
     if args.no_send:
         print("----------------------------------------------------")
@@ -139,7 +139,9 @@ def send_mail(to_addr, subject, message):
     if not args.only_email or args.only_email == to_addr:
         print("sending message to {0}".format(to_addr))
 
-        s = smtplib.SMTP('smtp.gmail.com:587')
+        # s = smtplib.SMTP('smtp.sendgrid.net:587')
+        s = smtplib.SMTP('smtp-relay.sendinblue.com:587')
+
         s.ehlo()
         s.starttls()
         s.login(args.user, args.password)
@@ -177,7 +179,7 @@ def main():
     if args.send_test_emails:
         for p in people:
             message = TEST_MESSAGE.format(person=p.name)
-            send_mail(p.email, TEST_SUBJECT, message)
+            send_mail(p.email, p.name, TEST_SUBJECT, message)
         exit(0)
 
     assignments = {}
@@ -201,7 +203,7 @@ def main():
             for p in assignments:
                 message = MESSAGE.format(person=assignments[p], assignment=p)
                 to_person = people_map[assignments[p]]
-                send_mail(to_person.email, SUBJECT, message)
+                send_mail(to_person.email, to_person.name, SUBJECT, message)
     else:
         print("didn't work - you will need to rerun")
         exit(1)
