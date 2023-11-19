@@ -35,22 +35,29 @@ If mails are to be sent, they will only be sent to this e-mail address.
 Useful for testing to see how the received e-mails look.""")
 
 parser.add_argument("--from", dest="from_user", help="""\
-If mails are to be sent, they sender is this e-mail address.""")
+If mails are to be sent, the sender is this e-mail address. Note that this email
+address should be the same as the address associated with SMTP relay account or
+otherwise the generated mail will look like spam. Defaults to the user name of
+the SMTP relay account.""")
 
 parser.add_argument("-t", dest="send_test_emails", action='store_true', help="""\
 Send test e-mails to participants. The test e-mail does not contain the
 Kris Kindle assignments and it's useful for validating that the email
 addresses that you have are correct.""")
 
-parser.add_argument("-u", "--user", dest="user", required=True,
-                    help="SMTP relay account that will be used to send the e-mails", )
+parser.add_argument("-u", "--user", dest="user", help="""\
+Username associated with SMTP relay account that will be used to send the e-mails.""")
 
-parser.add_argument("-p", "--password", dest="password",
-                    help="Password; you will be prompted if it's not supplied on the command line")
+parser.add_argument("-p", "--password", dest="password", help="""\
+Password associated with SMTP relay account username; will be prompted if it's
+not supplied on the command line""")
+
 args = parser.parse_args()
 if not args.password:
     args.password = getpass.getpass()
 
+if not args.from_user:
+    args.from_user = args.user
 
 SUBJECT = "Your Kris Kindle 2022 assignment!"
 MESSAGE = """Hello {person}:
@@ -123,12 +130,11 @@ class Person:
             return result
 
 
-def send_mail(to_addr, to_name, subject, message):
-    from_addr = args.from_user
+def send_mail(from_addr, to_addr, to_name, subject, message):
     msg = EmailMessage()
     msg.set_content(message)
     msg["Subject"] = subject
-    msg["From"] = from_addr
+    msg["From"] = f"Kris-Kindle <{from_addr}"
     msg["To"] = f"{to_name} <{to_addr}>"
 
     if args.no_send:
@@ -179,7 +185,7 @@ def main():
     if args.send_test_emails:
         for p in people:
             message = TEST_MESSAGE.format(person=p.name)
-            send_mail(p.email, p.name, TEST_SUBJECT, message)
+            send_mail(args.from_user, p.email, p.name, TEST_SUBJECT, message)
         exit(0)
 
     assignments = {}
@@ -203,7 +209,8 @@ def main():
             for p in assignments:
                 message = MESSAGE.format(person=assignments[p], assignment=p)
                 to_person = people_map[assignments[p]]
-                send_mail(to_person.email, to_person.name, SUBJECT, message)
+                send_mail(args.from_user, to_person.email, to_person.name,
+                          SUBJECT, message)
     else:
         print("didn't work - you will need to rerun")
         exit(1)
