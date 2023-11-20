@@ -59,24 +59,24 @@ if not args.password:
 if not args.from_user:
     args.from_user = args.user
 
-SUBJECT = "Your Kris Kindle 2022 assignment!"
-MESSAGE = """Hello {person}:
+SUBJECT = "Your Kris Kindle 2023 assignment!"
+MESSAGE = """\
+Hello {person}!
 
-Bet you weren't expecting to receive an email from me! Can you believe it's already that
-time again?
+Your assignment in the 2023 Kris Kindle is: <b>{assignment}</b>.
 
-Your assignment in the 2022 Kris Kindle is: <b>{assignment}</b>.
+Can you believe it's already that time of the year again? I know I was surprised today when I was told \
+by Mir to "just get the Kris Kindle done" and "I don't want to hear about your layer 3 protocol problems". \
+:-)
 
-The suggested amount to spend is approximately €30 or $30. No problem if you'd to spend a
-little more or less.
+The suggested amount to spend is approximately €30 or $30. No problem if you'd to spend a little more or less.
 
-Here's a Yuletide joke to get you in a Christmassy mood.
+Here's a Christmas joke to get you in a festive mood:
 
-Q: Who's Santa's favourite singer?
-A: Elfish Presley.
+Q: What do you call a cat sitting on the beach on Christmas Eve?
+A: Sandy Claws
 
-Let Dave F. know if you have any questions. He'll ask Mir and get back to you with the answer.
-Have fun shopping for your Kris Kindle!
+Let me know if you have any questions. Have fun shopping for your Kris Kindle!
 
 Kris :-)"""
 
