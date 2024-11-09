@@ -59,22 +59,26 @@ if not args.password:
 if not args.from_user:
     args.from_user = args.user
 
-SUBJECT = "Your Kris Kindle 2023 assignment!"
+SUBJECT = "Your Kris Kindle 2024 assignment!"
 MESSAGE = """\
 Hello {person}!
 
-Your assignment in the 2023 Kris Kindle is: <b>{assignment}</b>.
+Your assignment in the 2024 Kris Kindle is: <b>{assignment}</b>.
 
-Can you believe it's already that time of the year again? I know I was surprised today when I was told \
-by Mir to "just get the Kris Kindle done" and "I don't want to hear about your layer 3 protocol problems". \
-:-)
+Can you believe it's November already? Where does the time go.
 
-The suggested amount to spend is approximately €30 or $30. No problem if you'd to spend a little more or less.
+You might be interested to learn that there's a new rule added to the Kris Kindle logic this year: you can't get \
+someone that you got last year. (Don't worry, Ailbhe, I got you covered!)
 
-Here's a Christmas joke to get you in a festive mood:
+The suggested amount to spend is <b>approximately €30 or $30</b>. No problem if you'd to spend a little more or less.
 
-Q: What do you call a cat sitting on the beach on Christmas Eve?
-A: Sandy Claws
+Here's a couple of Christmas jokes to get you in a yuletide mood:
+
+Q: Why are Santa's helpers depressed?
+A: <s>The election.</s> Because they have low elf-esteem.
+
+Q: What do you call enthusiasts of the game of chess bragging about past wins in a hotel lobby?
+A: Chess nuts boasting in an open foyer.
 
 Let me know if you have any questions. Have fun shopping for your Kris Kindle!
 
@@ -109,7 +113,7 @@ class Person:
                 line = line.strip()
                 if line.startswith('#'):
                     continue
-                values = re.split('\s*,\s*', line)
+                values = re.split(r'\s*,\s*', line)
                 exclusions = []
                 if len(values) > 2:
                     exclusions = values[2:]
