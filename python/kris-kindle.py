@@ -49,7 +49,7 @@ parser.add_argument("-u", "--user", dest="user", help="""\
 Username associated with SMTP relay account that will be used to send the e-mails.""")
 
 parser.add_argument("-p", "--password", dest="password", help="""\
-Password associated with SMTP relay account username; will be prompted if it's
+Password / API key associated with SMTP relay account username; will be prompted if it's
 not supplied on the command line""")
 
 args = parser.parse_args()
